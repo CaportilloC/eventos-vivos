@@ -1,0 +1,24 @@
+# .NET
+src/backend/**/bin/
+src/backend/**/obj/
+
+# Angular / Node
+src/frontend/**/node_modules/
+src/frontend/**/.angular/
+src/frontend/**/dist/
+src/frontend/**/coverage/
+
+# Environment / secrets
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# OS
+.DS_Store

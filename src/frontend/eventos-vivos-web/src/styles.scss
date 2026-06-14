@@ -1,0 +1,753 @@
+// ─── Angular Material theming (MUST come before other rules) ────────
+@use '@angular/material' as mat;
+
+// ─── Bootstrap (grid, utilities, cards, tables, layout) ─────────────
+@import 'bootstrap/scss/bootstrap';
+
+// ─── SweetAlert2 ─────────────────────────────────────────────────────
+@import 'sweetalert2/src/sweetalert2';
+
+// ─── PRECLINIC-Inspired Design Tokens ───────────────────────────────
+
+:root {
+  // Primary palette
+  --ev-primary: #2e37a4;
+  --ev-primary-light: #4f56b9;
+  --ev-primary-dark: #1e2578;
+  --ev-accent: #00d3c7;
+  --ev-accent-light: #33dbcf;
+  --ev-accent-dark: #00a89e;
+
+  // Dashboard surface hierarchy
+  --ev-surface-page: #f4f6fa;
+  --ev-surface-card: #ffffff;
+  --ev-surface-elevated: #ffffff;
+  --ev-surface-sidebar: #1a1d29;
+  --ev-surface-sidebar-hover: rgba(255, 255, 255, 0.06);
+  --ev-surface-sidebar-active: rgba(255, 255, 255, 0.12);
+  --ev-surface-toolbar: #ffffff;
+
+  // Text
+  --ev-text-primary: #333448;
+  --ev-text-secondary: #6c757d;
+  --ev-text-muted: #9e9e9e;
+  --ev-text-sidebar: rgba(255, 255, 255, 0.7);
+  --ev-text-sidebar-active: #ffffff;
+
+  // Icon backgrounds for metric cards
+  --ev-icon-bg-event: #e3f2fd;
+  --ev-icon-bg-confirm: #e8f5e9;
+  --ev-icon-bg-cancel: #fbe9e7;
+  --ev-icon-bg-available: #f3e5f5;
+  --ev-icon-bg-occupancy: #fff8e1;
+  --ev-icon-bg-revenue: #e8f5e9;
+
+  // Shadows — consistent card elevation
+  --ev-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --ev-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --ev-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+
+  // Border radius
+  --ev-radius-sm: 8px;
+  --ev-radius-md: 12px;
+  --ev-radius-lg: 16px;
+
+  // Transitions
+  --ev-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --ev-transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$blue-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+body {
+  color-scheme: light;
+  background-color: var(--ev-surface-page);
+  color: var(--ev-text-primary);
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  margin: 0;
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+// ─── Bootstrap Overrides ────────────────────────────────────────────
+
+// Card — match Material card styling but use Bootstrap cards optionally
+.card {
+  border: none;
+  border-radius: var(--ev-radius-md);
+  box-shadow: var(--ev-shadow-sm);
+  transition: box-shadow var(--ev-transition-normal), transform var(--ev-transition-normal);
+
+  &:hover {
+    box-shadow: var(--ev-shadow-md);
+  }
+}
+
+.card-header {
+  background: transparent;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 1rem 1.25rem;
+}
+
+.card-body {
+  padding: 1.25rem;
+}
+
+// Table — clean look
+.table {
+  margin-bottom: 0;
+  font-size: 13px;
+
+  th {
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ev-text-secondary);
+    border-bottom-width: 1px;
+    padding: 0.75rem 1rem;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+    color: var(--ev-text-primary);
+  }
+
+  tbody tr {
+    transition: background var(--ev-transition-fast);
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.02);
+    }
+  }
+}
+
+// Buttons
+.btn {
+  border-radius: var(--ev-radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  transition: all var(--ev-transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--ev-shadow-md);
+  }
+}
+
+.btn-primary {
+  background: var(--ev-primary);
+  border-color: var(--ev-primary);
+
+  &:hover {
+    background: var(--ev-primary-light);
+    border-color: var(--ev-primary-light);
+  }
+}
+
+.btn-accent {
+  background: var(--ev-accent);
+  border-color: var(--ev-accent);
+  color: #fff;
+
+  &:hover {
+    background: var(--ev-accent-dark);
+    border-color: var(--ev-accent-dark);
+    color: #fff;
+  }
+}
+
+// ─── Material Overrides ─────────────────────────────────────────────
+
+.mat-mdc-card {
+  border-radius: var(--ev-radius-md) !important;
+  box-shadow: var(--ev-shadow-sm) !important;
+  transition: box-shadow var(--ev-transition-normal), transform var(--ev-transition-normal);
+
+  &:hover {
+    box-shadow: var(--ev-shadow-md) !important;
+  }
+}
+
+.mat-mdc-raised-button {
+  border-radius: var(--ev-radius-sm) !important;
+  box-shadow: var(--ev-shadow-sm) !important;
+  transition: box-shadow var(--ev-transition-fast), transform var(--ev-transition-fast) !important;
+
+  &:hover:not(:disabled) {
+    box-shadow: var(--ev-shadow-md) !important;
+    transform: translateY(-1px);
+  }
+}
+
+.mat-mdc-stroked-button {
+  border-radius: var(--ev-radius-sm) !important;
+}
+
+.mat-mdc-text-field-wrapper {
+  border-radius: var(--ev-radius-sm) !important;
+}
+
+// ─── Page Layout Utilities ──────────────────────────────────────────
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 8px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+
+  h1 {
+    margin: 0;
+    font: var(--mat-sys-headline-medium);
+    color: var(--ev-text-primary);
+  }
+}
+
+.page-subtitle {
+  margin: 4px 0 0;
+  color: var(--ev-text-secondary);
+  font-size: 14px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  h1 {
+    margin: 0;
+    font: var(--mat-sys-headline-medium);
+  }
+}
+
+// Breadcrumb-style nav
+.breadcrumb-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ev-text-secondary);
+  margin-bottom: 16px;
+
+  a {
+    color: var(--ev-text-secondary);
+    text-decoration: none;
+    transition: color var(--ev-transition-fast);
+
+    &:hover {
+      color: var(--ev-primary);
+    }
+  }
+
+  .separator {
+    color: var(--ev-text-muted);
+    font-size: 12px;
+  }
+
+  .current {
+    color: var(--ev-text-primary);
+    font-weight: 500;
+  }
+}
+
+// ─── Admin / Module-Index Patterns (AdminLTE-inspired) ──────────────
+
+// White card for admin tables
+.admin-card {
+  background: #fff;
+  border-radius: var(--ev-radius-md);
+  box-shadow: var(--ev-shadow-sm);
+  overflow: hidden;
+}
+
+.admin-card-footer {
+  padding: 10px 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 12px;
+  color: var(--ev-text-secondary);
+}
+
+// ─── Toolbar ────────────────────────────────────────────────────────
+
+.admin-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.admin-toolbar-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ev-text-primary);
+  line-height: 1.2;
+}
+
+.admin-subtitle {
+  font-size: 13px;
+  color: var(--ev-text-secondary);
+}
+
+// ─── Actions container — houses filter-group + action-group ──────────
+
+.admin-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+// ─── Filter group — inline filter controls ───────────────────────────
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+// ─── Action group — buttons and primary calls-to-action ──────────────
+
+.action-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+// ─── Search control ──────────────────────────────────────────────────
+
+.toolbar-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 160px;
+  max-width: 200px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  font-size: 16px;
+  color: var(--ev-text-muted);
+  pointer-events: none;
+}
+
+.search-input {
+  padding-left: 32px;
+  min-width: 140px;
+  font-size: 13px;
+  height: 31px; // match form-control-sm + form-select-sm
+}
+
+// ─── Select filters — consistent sizing ──────────────────────────────
+
+.toolbar-select {
+  min-width: 120px;
+  max-width: 160px;
+  font-size: 13px;
+  height: 31px; // match form-control-sm
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+// ─── Responsive toolbar ──────────────────────────────────────────────
+
+// Tablet: filters drop below actions, actions float right
+@media (max-width: 991.98px) {
+  .admin-toolbar-actions {
+    width: 100%;
+  }
+
+  .filter-group {
+    flex: 1 1 100%;
+    order: 2;
+    margin-top: 4px;
+  }
+
+  .action-group {
+    order: 1;
+    margin-left: auto;
+  }
+}
+
+// Desktop wide: single-line toolbar, no wrapping
+@media (min-width: 1200px) {
+  .admin-toolbar {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .admin-toolbar-actions {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .filter-group {
+    flex-wrap: nowrap;
+  }
+
+  .toolbar-search {
+    min-width: 130px;
+    max-width: 180px;
+  }
+
+  .toolbar-select {
+    min-width: 105px;
+    max-width: 150px;
+  }
+}
+
+// Mobile narrow: filters go full-width or 2-col
+@media (max-width: 575.98px) {
+  .admin-toolbar {
+    flex-direction: column;
+  }
+
+  .admin-toolbar-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .filter-group {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .toolbar-search {
+    min-width: 100%;
+    max-width: 100%;
+  }
+
+  .toolbar-select {
+    flex: 1 1 calc(50% - 3px);
+    min-width: 0;
+    max-width: none;
+  }
+
+  .action-group {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+// Compact table inside admin cards
+.admin-table {
+  margin-bottom: 0;
+  font-size: 13px;
+
+  thead th {
+    background: #f8f9fc;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ev-text-secondary);
+    padding: 10px 12px;
+    border-bottom: 2px solid #e9ecef;
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 10px 12px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  tbody tr:hover {
+    background-color: #f8f9ff;
+  }
+}
+
+// ─── Form UI Refinements ────────────────────────────────────────────
+
+.ev-form-card {
+  max-width: 780px;
+  margin: 0 auto;
+  background: #fff !important;
+  border: 1px solid rgba(46, 55, 164, 0.08) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 10px 30px rgba(26, 29, 41, 0.06), 0 2px 8px rgba(26, 29, 41, 0.04) !important;
+  overflow: hidden;
+
+  .mat-mdc-card-content {
+    padding: 22px 24px 24px;
+  }
+}
+
+.ev-form-card--narrow {
+  max-width: 620px;
+}
+
+.ev-form-card--wide {
+  max-width: 820px;
+}
+
+.ev-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.ev-form-section {
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(46, 55, 164, 0.08);
+
+  &:last-of-type {
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+}
+
+.ev-form-section-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 14px;
+  color: var(--ev-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  line-height: 1.3;
+  text-transform: uppercase;
+
+  .mat-icon {
+    width: 17px;
+    height: 17px;
+    color: var(--ev-primary);
+    font-size: 17px;
+  }
+}
+
+.ev-form-section-subtitle,
+.ev-form-helper {
+  margin: -6px 0 14px;
+  color: var(--ev-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.ev-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ev-form-field-full {
+  width: 100%;
+}
+
+// Date/time visual block group
+.date-block {
+  background: #fff;
+  border: 1px solid rgba(46, 55, 164, 0.08);
+  border-radius: var(--ev-radius-sm);
+  padding: 14px;
+  margin-bottom: 10px;
+
+  &:last-of-type {
+    margin-bottom: 0;
+  }
+}
+
+.date-block-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  color: var(--ev-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+
+  .mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: var(--ev-primary-light);
+  }
+}
+
+// Date/time row layout
+.date-time-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+
+  .date-field {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .time-field {
+    width: 150px;
+    flex-shrink: 0;
+  }
+}
+
+.grid-span-2,
+.ev-grid-span-2 {
+  grid-column: 1 / -1;
+}
+
+.ev-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 4px;
+  margin-top: 2px;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.ev-form-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fff5f5;
+  border: 1px solid #ffd6d6;
+  color: #b42318;
+  border-radius: var(--ev-radius-sm);
+  font-size: 13px;
+  line-height: 1.4;
+
+  .mat-icon {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+  }
+}
+
+.ev-form-readonly {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 16px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid rgba(46, 55, 164, 0.08);
+}
+
+// Soft focus overrides for Material input fields
+.mat-mdc-form-field-focus-overlay {
+  opacity: 0 !important;
+}
+
+.mdc-text-field--focused .mdc-notched-outline__leading,
+.mdc-text-field--focused .mdc-notched-outline__notch,
+.mdc-text-field--focused .mdc-notched-outline__trailing {
+  border-color: var(--ev-primary) !important;
+  border-width: 2px !important;
+}
+
+.mdc-text-field--focused:not(.mdc-text-field--invalid) .mdc-notched-outline__leading,
+.mdc-text-field--focused:not(.mdc-text-field--invalid) .mdc-notched-outline__notch,
+.mdc-text-field--focused:not(.mdc-text-field--invalid) .mdc-notched-outline__trailing {
+  border-color: var(--ev-primary) !important;
+  border-width: 2px !important;
+}
+
+// Softer outline appearance by default
+.mdc-notched-outline__leading,
+.mdc-notched-outline__notch,
+.mdc-notched-outline__trailing {
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  transition: border-color var(--ev-transition-normal), border-width var(--ev-transition-fast) !important;
+}
+
+.mat-mdc-form-field:hover .mdc-notched-outline__leading,
+.mat-mdc-form-field:hover .mdc-notched-outline__notch,
+.mat-mdc-form-field:hover .mdc-notched-outline__trailing {
+  border-color: rgba(0, 0, 0, 0.28) !important;
+}
+
+// Responsive: stack date/time on mobile
+@media (max-width: 600px) {
+  .ev-form-card .mat-mdc-card-content {
+    padding: 18px 16px;
+  }
+
+  .ev-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ev-form-actions {
+    flex-direction: column;
+
+    button {
+      justify-content: center;
+      width: 100%;
+    }
+  }
+
+  .date-time-row {
+    flex-direction: column;
+    gap: 0;
+
+    .time-field {
+      width: 100%;
+    }
+  }
+}
+
+// ─── Utility Classes ────────────────────────────────────────────────
+
+.text-center { text-align: center; }
+.mt-16 { margin-top: 16px; }
+.mb-16 { margin-bottom: 16px; }
+.mt-24 { margin-top: 24px; }
+.mb-24 { margin-bottom: 24px; }

@@ -1,0 +1,30 @@
+# Local AI/SDD planning artifacts
+.atl/
+openspec/
+.playwright-mcp/
+
+# Local generated screenshots / review artifacts
+eventos-vivos-ui-polish.png
+
+# .NET
+bin/
+obj/
+TestResults/
+*.user
+*.suo
+
+# Angular / Node
+node_modules/
+dist/
+.angular/
+coverage/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
