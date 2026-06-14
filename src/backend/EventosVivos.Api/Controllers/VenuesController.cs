@@ -2,7 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using EventosVivos.Application.DTOs;
 using EventosVivos.Domain.Entities;
-using EventosVivos.Domain.Repositories;
+using EventosVivos.Application.Features.Venues.Queries.ListVenues;
+using MediatR;
 
 namespace EventosVivos.Api.Controllers;
 
@@ -15,12 +16,9 @@ namespace EventosVivos.Api.Controllers;
 [SwaggerTag("Venues — reference data for event scheduling")]
 public class VenuesController : ControllerBase
 {
-    private readonly IVenueRepository _venueRepository;
+    private readonly ISender _sender;
 
-    public VenuesController(IVenueRepository venueRepository)
-    {
-        _venueRepository = venueRepository;
-    }
+    public VenuesController(ISender sender) => _sender = sender;
 
     /// <summary>List all venues with pagination.</summary>
     /// <remarks>
@@ -44,35 +42,10 @@ public class VenuesController : ControllerBase
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 50)
     {
-        if (pageNumber < 1)
-            return Problem(statusCode: 400, detail: "PageNumber must be 1 or greater.");
-        if (pageSize < 1 || pageSize > 50)
-            return Problem(statusCode: 400, detail: "PageSize must be between 1 and 50.");
+        var result = await _sender.Send(new ListVenuesQuery(pageNumber, pageSize), ct);
+        if (result.IsFailure)
+            return this.ToProblem(result);
 
-        var venues = await _venueRepository.GetAllAsync(ct);
-
-        // Stable ordering: Id asc
-        var ordered = venues.OrderBy(v => v.Id).ToList();
-
-        var totalCount = ordered.Count;
-        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
-        if (totalPages == 0) totalPages = 1;
-
-        var pagedItems = ordered
-            .Skip((pageNumber - 1) * pageSize)
-            .Take(pageSize)
-            .ToList()
-            .AsReadOnly();
-
-        var result = new PagedResult<Venue>(
-            pagedItems,
-            pageNumber,
-            pageSize,
-            totalCount,
-            totalPages,
-            pageNumber > 1,
-            pageNumber < totalPages);
-
-        return Ok(result);
+        return Ok(result.Data);
     }
 }

@@ -6,8 +6,11 @@ using EventosVivos.Domain.Services;
 using EventosVivos.Domain.ValueObjects;
 using EventosVivos.Application.DTOs;
 using EventosVivos.Application.Abstractions;
+using MediatR;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
-namespace EventosVivos.Application.Handlers;
+namespace EventosVivos.Application.Features.Reservations.Commands.CreateReservation;
 
 /// <summary>
 /// Request to reserve tickets for an event.
@@ -20,32 +23,35 @@ public record ReserveTicketsRequest(
     Guid EventId,
     int Quantity,
     string BuyerName,
-    string BuyerEmail);
+    string BuyerEmail) : IRequest<Result<ReservationResponse>>;
 
 /// <summary>
 /// Handles ticket reservation: validates availability, buyer info,
 /// checks time/price limits, and creates a pending reservation.
 /// </summary>
-public class ReserveTicketsHandler
+public class ReserveTicketsHandler : IRequestHandler<ReserveTicketsRequest, Result<ReservationResponse>>
 {
     private readonly IEventRepository _eventRepository;
     private readonly IReservationRepository _reservationRepository;
     private readonly IClock _clock;
     private readonly ITransactionRunner _transactionRunner;
+    private readonly ILogger<ReserveTicketsHandler> _logger;
 
     public ReserveTicketsHandler(
         IEventRepository eventRepository,
         IReservationRepository reservationRepository,
         IClock clock,
-        ITransactionRunner? transactionRunner = null)
+        ITransactionRunner? transactionRunner = null,
+        ILogger<ReserveTicketsHandler>? logger = null)
     {
         _eventRepository = eventRepository;
         _reservationRepository = reservationRepository;
         _clock = clock;
         _transactionRunner = transactionRunner ?? new NoopTransactionRunner();
+        _logger = logger ?? NullLogger<ReserveTicketsHandler>.Instance;
     }
 
-    public async Task<Result<ReservationResponse>> HandleAsync(
+    public async Task<Result<ReservationResponse>> Handle(
         ReserveTicketsRequest request, CancellationToken ct = default)
     {
         // Build buyer value object
@@ -81,6 +87,11 @@ public class ReserveTicketsHandler
 
             var reservation = new Reservation(@event.Id, buyer, request.Quantity, now);
             await _reservationRepository.AddAsync(reservation, transactionCt);
+            _logger.LogInformation(
+                "Reservation created {ReservationId} for event {EventId} with quantity {Quantity}",
+                reservation.Id,
+                reservation.EventId,
+                reservation.Quantity);
 
             return Result<ReservationResponse>.Success(Map(reservation));
         }, ct);

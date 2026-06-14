@@ -1,5 +1,6 @@
 using FluentValidation;
-using EventosVivos.Application.Handlers;
+using EventosVivos.Application.Features.Events.Commands.CreateEvent;
+using EventosVivos.Domain.Rules;
 using EventosVivos.Domain.ValueObjects;
 
 namespace EventosVivos.Application.Validators;
@@ -13,20 +14,20 @@ public class CreateEventValidator : AbstractValidator<CreateEventRequest>
     {
         RuleFor(x => x.Title)
             .NotEmpty().WithMessage("Event title is required.")
-            .MinimumLength(5).WithMessage("Event title must be at least 5 characters.")
-            .MaximumLength(100).WithMessage("Event title must not exceed 100 characters.");
+            .MinimumLength(EventRules.TitleMinLength).WithMessage("Event title must be at least 5 characters.")
+            .MaximumLength(EventRules.TitleMaxLength).WithMessage("Event title must not exceed 100 characters.");
 
         RuleFor(x => x.Description)
             .NotEmpty().WithMessage("Event description is required.")
-            .MinimumLength(10).WithMessage("Event description must be at least 10 characters.")
-            .MaximumLength(500).WithMessage("Event description must not exceed 500 characters.");
+            .MinimumLength(EventRules.DescriptionMinLength).WithMessage("Event description must be at least 10 characters.")
+            .MaximumLength(EventRules.DescriptionMaxLength).WithMessage("Event description must not exceed 500 characters.");
 
         RuleFor(x => x.VenueId)
             .GreaterThan(0).WithMessage("A valid venue must be selected.");
 
         RuleFor(x => x.MaxCapacity)
             .GreaterThan(0).WithMessage("Event capacity must be positive.")
-            .LessThanOrEqualTo(10_000).WithMessage("Event capacity seems unreasonably high.");
+            .LessThanOrEqualTo(EventRules.MaxCapacityInput).WithMessage("Event capacity seems unreasonably high.");
 
         RuleFor(x => x.Price)
             .GreaterThan(0).WithMessage("Ticket price must be positive.")

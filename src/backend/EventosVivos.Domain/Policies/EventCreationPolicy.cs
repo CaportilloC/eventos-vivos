@@ -1,4 +1,5 @@
 using EventosVivos.Domain.Enums;
+using EventosVivos.Domain.Rules;
 using EventosVivos.Domain.Services;
 using EventosVivos.Domain.ValueObjects;
 
@@ -21,14 +22,14 @@ public static class EventCreationPolicy
         if (string.IsNullOrWhiteSpace(title))
             return Result.Failure("Event title is required.", ErrorType.Validation);
 
-        if (title.Length < 5 || title.Length > 100)
-            return Result.Failure("Event title must be between 5 and 100 characters.", ErrorType.Validation);
+        if (title.Length < EventRules.TitleMinLength || title.Length > EventRules.TitleMaxLength)
+            return Result.Failure($"Event title must be between {EventRules.TitleMinLength} and {EventRules.TitleMaxLength} characters.", ErrorType.Validation);
 
         if (string.IsNullOrWhiteSpace(description))
             return Result.Failure("Event description is required.", ErrorType.Validation);
 
-        if (description.Length < 10 || description.Length > 500)
-            return Result.Failure("Event description must be between 10 and 500 characters.", ErrorType.Validation);
+        if (description.Length < EventRules.DescriptionMinLength || description.Length > EventRules.DescriptionMaxLength)
+            return Result.Failure($"Event description must be between {EventRules.DescriptionMinLength} and {EventRules.DescriptionMaxLength} characters.", ErrorType.Validation);
 
         if (maxCapacity <= 0)
             return Result.Failure("Event capacity must be positive.", ErrorType.Validation);
@@ -45,7 +46,7 @@ public static class EventCreationPolicy
         // RN-03: weekend events cannot start after 22:00 Colombia time
         var bogotaStart = TimeZoneInfo.ConvertTime(schedule.StartsAt, ColombiaTime.Info);
         if (IsWeekend(bogotaStart.DayOfWeek) &&
-            (bogotaStart.Hour > 22 || (bogotaStart.Hour == 22 && bogotaStart.Minute > 0)))
+            (bogotaStart.Hour > EventRules.WeekendLatestStartHourColombia || (bogotaStart.Hour == EventRules.WeekendLatestStartHourColombia && bogotaStart.Minute > 0)))
             return Result.Failure(
                 "Weekend events cannot start after 22:00 Colombia time.", ErrorType.Validation);
 

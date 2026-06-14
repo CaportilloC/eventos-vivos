@@ -1,7 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using EventosVivos.Application.DTOs;
-using EventosVivos.Application.Handlers;
+using EventosVivos.Application.Features.Events.Commands.CancelEvent;
+using EventosVivos.Application.Features.Events.Commands.CreateEvent;
+using EventosVivos.Application.Features.Events.Commands.UpdateEvent;
+using EventosVivos.Application.Features.Events.Queries.GetEventById;
+using EventosVivos.Application.Features.Events.Queries.ListEventReservations;
+using EventosVivos.Application.Features.Events.Queries.ListEvents;
+using MediatR;
 
 namespace EventosVivos.Api.Controllers;
 
@@ -15,28 +21,9 @@ namespace EventosVivos.Api.Controllers;
 [SwaggerTag("Event management — create, list, get, update, and cancel events")]
 public class EventsController : ControllerBase
 {
-    private readonly CreateEventHandler _createHandler;
-    private readonly ListEventsHandler _listHandler;
-    private readonly CancelEventHandler _cancelHandler;
-    private readonly GetEventHandler _getHandler;
-    private readonly UpdateEventHandler _updateHandler;
-    private readonly ListReservationsHandler _listReservationsHandler;
+    private readonly ISender _sender;
 
-    public EventsController(
-        CreateEventHandler createHandler,
-        ListEventsHandler listHandler,
-        CancelEventHandler cancelHandler,
-        GetEventHandler getHandler,
-        UpdateEventHandler updateHandler,
-        ListReservationsHandler listReservationsHandler)
-    {
-        _createHandler = createHandler;
-        _listHandler = listHandler;
-        _cancelHandler = cancelHandler;
-        _getHandler = getHandler;
-        _updateHandler = updateHandler;
-        _listReservationsHandler = listReservationsHandler;
-    }
+    public EventsController(ISender sender) => _sender = sender;
 
     /// <summary>Create a new event.</summary>
     /// <remarks>
@@ -66,7 +53,7 @@ public class EventsController : ControllerBase
         [FromBody] CreateEventRequest request,
         CancellationToken ct)
     {
-        var result = await _createHandler.HandleAsync(request, ct);
+        var result = await _sender.Send(request, ct);
         if (result.IsFailure)
             return this.ToProblem(result);
 
@@ -86,7 +73,7 @@ public class EventsController : ControllerBase
     /// <param name="status">Filter by derived status (activo, completado, cancelado).</param>
     /// <param name="titleSearch">Search events by title (partial match).</param>
     /// <param name="pageNumber">Page number (1-based, default 1).</param>
-    /// <param name="pageSize">Items per page (1-50, default 10).</param>
+    /// <param name="pageSize">Items per page (1-100, default 10).</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Paged list of matching events.</returns>
     [HttpGet]
@@ -117,7 +104,7 @@ public class EventsController : ControllerBase
             PageNumber: pageNumber,
             PageSize: pageSize);
 
-        var result = await _listHandler.HandleAsync(query, ct);
+        var result = await _sender.Send(query, ct);
         if (result.IsFailure)
             return this.ToProblem(result);
 
@@ -140,7 +127,7 @@ public class EventsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
-        var result = await _getHandler.HandleAsync(new GetEventQuery(id), ct);
+        var result = await _sender.Send(new GetEventQuery(id), ct);
         if (result.IsFailure)
             return this.ToProblem(result);
 
@@ -172,7 +159,7 @@ public class EventsController : ControllerBase
         CancellationToken ct)
     {
         var updateRequest = request with { EventId = id };
-        var result = await _updateHandler.HandleAsync(updateRequest, ct);
+        var result = await _sender.Send(updateRequest, ct);
         if (result.IsFailure)
             return this.ToProblem(result);
 
@@ -196,7 +183,7 @@ public class EventsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Cancel(Guid id, CancellationToken ct)
     {
-        var result = await _cancelHandler.HandleAsync(new CancelEventRequest(id), ct);
+        var result = await _sender.Send(new CancelEventRequest(id), ct);
         if (result.IsFailure)
             return this.ToProblem(result);
 
@@ -209,7 +196,7 @@ public class EventsController : ControllerBase
     /// </remarks>
     /// <param name="id">Event GUID.</param>
     /// <param name="pageNumber">Page number (1-based, default 1).</param>
-    /// <param name="pageSize">Items per page (1-50, default 10).</param>
+    /// <param name="pageSize">Items per page (1-100, default 10).</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Paged list of reservations for the event.</returns>
     [HttpGet("{id:guid}/reservations")]
@@ -225,11 +212,11 @@ public class EventsController : ControllerBase
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 10)
     {
-        var query = new ListReservationsQuery(
+        var query = new ListEventReservationsQuery(
             EventId: id,
             PageNumber: pageNumber,
             PageSize: pageSize);
-        var result = await _listReservationsHandler.HandleAsync(query, ct);
+        var result = await _sender.Send(query, ct);
         if (result.IsFailure)
             return this.ToProblem(result);
 

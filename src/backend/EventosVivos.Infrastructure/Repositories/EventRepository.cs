@@ -21,13 +21,16 @@ public class EventRepository : IEventRepository
     public async Task<IReadOnlyList<Event>> GetByVenueIdAsync(int venueId, CancellationToken ct = default) =>
         await _db.Events.AsNoTracking().Where(e => e.VenueId == venueId).ToListAsync(ct);
 
-    public async Task<IReadOnlyList<Event>> GetFilteredAsync(
-        EventType? type = null,
-        int? venueId = null,
-        DateTimeOffset? startsAtFrom = null,
-        DateTimeOffset? startsAtTo = null,
-        bool? isCanceled = null,
-        string? titleSearch = null,
+    public async Task<PagedQueryResult<Event>> GetFilteredPageAsync(
+        EventType? type,
+        int? venueId,
+        DateTimeOffset? startsAtFrom,
+        DateTimeOffset? startsAtTo,
+        EventStatus? status,
+        DateTimeOffset now,
+        string? titleSearch,
+        int pageNumber,
+        int pageSize,
         CancellationToken ct = default)
     {
         var query = _db.Events.AsNoTracking().AsQueryable();
@@ -44,13 +47,29 @@ public class EventRepository : IEventRepository
         if (startsAtTo.HasValue)
             query = query.Where(e => e.Schedule.StartsAt <= startsAtTo.Value);
 
-        if (isCanceled.HasValue)
-            query = query.Where(e => e.IsCanceled == isCanceled.Value);
+        if (status.HasValue)
+        {
+            query = status.Value switch
+            {
+                EventStatus.Cancelado => query.Where(e => e.IsCanceled),
+                EventStatus.Completado => query.Where(e => !e.IsCanceled && e.Schedule.EndsAt < now),
+                EventStatus.Activo => query.Where(e => !e.IsCanceled && e.Schedule.EndsAt >= now),
+                _ => query
+            };
+        }
 
         if (!string.IsNullOrWhiteSpace(titleSearch))
             query = query.Where(e => EF.Functions.Like(e.Title, $"%{titleSearch}%"));
 
-        return await query.ToListAsync(ct);
+        var totalCount = await query.CountAsync(ct);
+        var items = await query
+            .OrderBy(e => e.Schedule.StartsAt)
+            .ThenBy(e => e.Title)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return new PagedQueryResult<Event>(items, totalCount);
     }
 
     public async Task AddAsync(Event @event, CancellationToken ct = default)

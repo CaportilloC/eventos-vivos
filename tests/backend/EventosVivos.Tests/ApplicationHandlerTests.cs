@@ -1,6 +1,17 @@
 using EventosVivos.Application;
 using EventosVivos.Application.DTOs;
-using EventosVivos.Application.Handlers;
+using EventosVivos.Application.Features.Events.Commands.CancelEvent;
+using EventosVivos.Application.Features.Events.Commands.CreateEvent;
+using EventosVivos.Application.Features.Events.Commands.UpdateEvent;
+using EventosVivos.Application.Features.Events.Queries.GetEventById;
+using EventosVivos.Application.Features.Events.Queries.ListEvents;
+using EventosVivos.Application.Features.Reports.Queries.GetOccupancyReport;
+using EventosVivos.Application.Features.Reservations.Commands.CancelReservation;
+using EventosVivos.Application.Features.Reservations.Commands.ConfirmPayment;
+using EventosVivos.Application.Features.Reservations.Commands.CreateReservation;
+using EventosVivos.Application.Features.Reservations.Commands.UpdateReservation;
+using EventosVivos.Application.Features.Reservations.Queries.GetReservationById;
+using EventosVivos.Application.Features.Reservations.Queries.ListReservations;
 using EventosVivos.Domain.Entities;
 using EventosVivos.Domain.Enums;
 using EventosVivos.Domain.Policies;
@@ -17,11 +28,6 @@ public class InMemoryEventRepository : IEventRepository
 {
     private readonly List<Event> _events = new();
 
-    public Task<TResult> ExecuteInSerializableTransactionAsync<TResult>(
-        Func<CancellationToken, Task<TResult>> operation,
-        CancellationToken ct = default) =>
-        operation(ct);
-
     public Task<Event?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
         Task.FromResult(_events.FirstOrDefault(e => e.Id == id));
 
@@ -29,21 +35,49 @@ public class InMemoryEventRepository : IEventRepository
         Task.FromResult<IReadOnlyList<Event>>(
             _events.Where(e => e.VenueId == venueId).ToList());
 
-    public Task<IReadOnlyList<Event>> GetFilteredAsync(
-        EventType? type = null, int? venueId = null,
-        DateTimeOffset? startsAtFrom = null, DateTimeOffset? startsAtTo = null,
-        bool? isCanceled = null, string? titleSearch = null,
-        CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<Event>>(
-            _events.Where(e =>
-                (!type.HasValue || e.Type == type) &&
-                (!venueId.HasValue || e.VenueId == venueId) &&
-                (!startsAtFrom.HasValue || e.Schedule.StartsAt >= startsAtFrom) &&
-                (!startsAtTo.HasValue || e.Schedule.StartsAt <= startsAtTo) &&
-                (!isCanceled.HasValue || e.IsCanceled == isCanceled) &&
-                (string.IsNullOrWhiteSpace(titleSearch) ||
-                 e.Title.Contains(titleSearch, StringComparison.OrdinalIgnoreCase))
-            ).ToList());
+    public Task<PagedQueryResult<Event>> GetFilteredPageAsync(
+        EventType? type,
+        int? venueId,
+        DateTimeOffset? startsAtFrom,
+        DateTimeOffset? startsAtTo,
+        EventStatus? status,
+        DateTimeOffset now,
+        string? titleSearch,
+        int pageNumber,
+        int pageSize,
+        CancellationToken ct = default)
+    {
+        var query = _events.Where(e =>
+            (!type.HasValue || e.Type == type) &&
+            (!venueId.HasValue || e.VenueId == venueId) &&
+            (!startsAtFrom.HasValue || e.Schedule.StartsAt >= startsAtFrom) &&
+            (!startsAtTo.HasValue || e.Schedule.StartsAt <= startsAtTo) &&
+            (string.IsNullOrWhiteSpace(titleSearch) ||
+             e.Title.Contains(titleSearch, StringComparison.OrdinalIgnoreCase)));
+
+        if (status.HasValue)
+        {
+            query = status.Value switch
+            {
+                EventStatus.Cancelado => query.Where(e => e.IsCanceled),
+                EventStatus.Completado => query.Where(e => !e.IsCanceled && e.Schedule.EndsAt < now),
+                EventStatus.Activo => query.Where(e => !e.IsCanceled && e.Schedule.EndsAt >= now),
+                _ => query
+            };
+        }
+
+        var ordered = query
+            .OrderBy(e => e.Schedule.StartsAt)
+            .ThenBy(e => e.Title)
+            .ToList();
+
+        var items = ordered
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        return Task.FromResult(new PagedQueryResult<Event>(items, ordered.Count));
+    }
 
     public Task AddAsync(Event @event, CancellationToken ct = default)
     {
@@ -73,17 +107,30 @@ public class InMemoryReservationRepository : IReservationRepository
         Task.FromResult<IReadOnlyList<Reservation>>(
             _reservations.Where(r => r.EventId == eventId).ToList());
 
-    public Task<IReadOnlyList<Reservation>> GetFilteredAsync(
-        Guid? eventId = null, string? status = null, string? buyerEmail = null,
-        CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<Reservation>>(
-            _reservations.Where(r =>
+    public Task<PagedQueryResult<Reservation>> GetFilteredPageAsync(
+        Guid? eventId,
+        ReservationStatus? status,
+        string? buyerEmail,
+        int pageNumber,
+        int pageSize,
+        CancellationToken ct = default)
+    {
+        var filtered = _reservations
+            .Where(r =>
                 (!eventId.HasValue || r.EventId == eventId) &&
-                (string.IsNullOrWhiteSpace(status) ||
-                 r.Status.ToString().Equals(status, StringComparison.OrdinalIgnoreCase)) &&
+                (!status.HasValue || r.Status == status) &&
                 (string.IsNullOrWhiteSpace(buyerEmail) ||
-                 r.Buyer.Email.Contains(buyerEmail, StringComparison.OrdinalIgnoreCase))
-            ).ToList());
+                 r.Buyer.Email.Contains(buyerEmail, StringComparison.OrdinalIgnoreCase)))
+            .OrderByDescending(r => r.CreatedAt)
+            .ToList();
+
+        var items = filtered
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        return Task.FromResult(new PagedQueryResult<Reservation>(items, filtered.Count));
+    }
 
     public Task<bool> CodeExistsAsync(string code, CancellationToken ct = default) =>
         Task.FromResult(_reservations.Any(r => r.Code == code));
@@ -143,7 +190,7 @@ public static class HandlerTestSetup
         var clock = DefaultClock;
 
         var handler = new CreateEventHandler(events, venues, clock);
-        var result = handler.HandleAsync(
+        var result = handler.Handle(
             new CreateEventRequest("Seed Event", "Seed event description", 3, 100,
                 FutureDate, FutureEnd, 50, "conferencia")).GetAwaiter().GetResult();
 
@@ -168,7 +215,7 @@ public class ApplicationHandlerTests
             2, 40, HandlerTestSetup.FutureDate, HandlerTestSetup.FutureEnd,
             80, "conferencia");
 
-        var result = await handler.HandleAsync(request);
+        var result = await handler.Handle(request);
 
         Assert.True(result.IsSuccess);
         Assert.NotEqual(Guid.Empty, result.Data);
@@ -190,7 +237,7 @@ public class ApplicationHandlerTests
             HandlerTestSetup.FutureEnd.AddDays(10),
             80, "conferencia");
 
-        var result = await handler.HandleAsync(request);
+        var result = await handler.Handle(request);
 
         Assert.True(result.IsFailure);
         Assert.Contains(expectedError, result.Error, StringComparison.OrdinalIgnoreCase);
@@ -207,7 +254,7 @@ public class ApplicationHandlerTests
             HandlerTestSetup.FutureEnd.AddDays(10),
             80, "conferencia");
 
-        var result = await handler.HandleAsync(request);
+        var result = await handler.Handle(request);
 
         Assert.True(result.IsFailure);
         Assert.Contains("description", result.Error, StringComparison.OrdinalIgnoreCase);
@@ -222,7 +269,7 @@ public class ApplicationHandlerTests
             "Bad Type", "Valid event description", 1, 100, HandlerTestSetup.FutureDate,
             HandlerTestSetup.FutureEnd, 80, "invalid_type");
 
-        var result = await handler.HandleAsync(request);
+        var result = await handler.Handle(request);
 
         Assert.True(result.IsFailure);
         Assert.Contains("Invalid event type", result.Error, StringComparison.OrdinalIgnoreCase);
@@ -237,7 +284,7 @@ public class ApplicationHandlerTests
             "No Venue", "Valid event description", 999, 100, HandlerTestSetup.FutureDate,
             HandlerTestSetup.FutureEnd, 80, "conferencia");
 
-        var result = await handler.HandleAsync(request);
+        var result = await handler.Handle(request);
 
         Assert.True(result.IsFailure);
         Assert.Contains("not found", result.Error, StringComparison.OrdinalIgnoreCase);
@@ -252,7 +299,7 @@ public class ApplicationHandlerTests
             "Overflow", "Valid event description", 2, 51, HandlerTestSetup.FutureDate,
             HandlerTestSetup.FutureEnd, 80, "taller");
 
-        var result = await handler.HandleAsync(request);
+        var result = await handler.Handle(request);
 
         Assert.True(result.IsFailure);
         Assert.Contains("cannot exceed", result.Error, StringComparison.OrdinalIgnoreCase);
@@ -270,7 +317,7 @@ public class ApplicationHandlerTests
             HandlerTestSetup.FutureDate.AddHours(1),
             HandlerTestSetup.FutureEnd.AddHours(1), 80, "conferencia");
 
-        var result = await handler.HandleAsync(overlapping);
+        var result = await handler.Handle(overlapping);
 
         Assert.True(result.IsFailure);
         Assert.Contains("overlap", result.Error, StringComparison.OrdinalIgnoreCase);
@@ -286,7 +333,7 @@ public class ApplicationHandlerTests
         var request = new ReserveTicketsRequest(
             eventId, 3, "Ana Pérez", "ana@example.com");
 
-        var result = await handler.HandleAsync(request);
+        var result = await handler.Handle(request);
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Data);
@@ -302,7 +349,7 @@ public class ApplicationHandlerTests
         var request = new ReserveTicketsRequest(
             eventId, 1, "Ana Pérez", "not-an-email");
 
-        var result = await handler.HandleAsync(request);
+        var result = await handler.Handle(request);
 
         Assert.True(result.IsFailure);
     }
@@ -315,7 +362,7 @@ public class ApplicationHandlerTests
         var request = new ReserveTicketsRequest(
             eventId, 1, "A", "ana@example.com");
 
-        var result = await handler.HandleAsync(request);
+        var result = await handler.Handle(request);
 
         Assert.True(result.IsFailure);
         Assert.Contains("2", result.Error);
@@ -330,7 +377,7 @@ public class ApplicationHandlerTests
         var request = new ReserveTicketsRequest(
             Guid.NewGuid(), 1, "Ana Pérez", "ana@example.com");
 
-        var result = await handler.HandleAsync(request);
+        var result = await handler.Handle(request);
 
         Assert.True(result.IsFailure);
         Assert.Contains("not found", result.Error, StringComparison.OrdinalIgnoreCase);
@@ -344,12 +391,12 @@ public class ApplicationHandlerTests
         var (events, reservations, _, clock, eventId) = HandlerTestSetup.CreateWithSeed();
 
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
-        var reserveResult = await reserveHandler.HandleAsync(
+        var reserveResult = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 2, "Juan Lopez", "juan@test.com"));
         Assert.True(reserveResult.IsSuccess);
 
         var confirmHandler = new ConfirmPaymentHandler(reservations, clock);
-        var confirmResult = await confirmHandler.HandleAsync(
+        var confirmResult = await confirmHandler.Handle(
             new ConfirmPaymentRequest(reserveResult.Data!.Id));
 
         Assert.True(confirmResult.IsSuccess);
@@ -364,14 +411,14 @@ public class ApplicationHandlerTests
         var (events, reservations, _, clock, eventId) = HandlerTestSetup.CreateWithSeed();
 
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
-        var reserveResult = await reserveHandler.HandleAsync(
+        var reserveResult = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 1, "Test", "test@test.com"));
         Assert.True(reserveResult.IsSuccess);
 
         var confirmHandler = new ConfirmPaymentHandler(reservations, clock);
-        await confirmHandler.HandleAsync(new ConfirmPaymentRequest(reserveResult.Data!.Id));
+        await confirmHandler.Handle(new ConfirmPaymentRequest(reserveResult.Data!.Id));
 
-        var secondConfirm = await confirmHandler.HandleAsync(
+        var secondConfirm = await confirmHandler.Handle(
             new ConfirmPaymentRequest(reserveResult.Data!.Id));
 
         Assert.True(secondConfirm.IsFailure);
@@ -382,7 +429,7 @@ public class ApplicationHandlerTests
     {
         var (_, reservations, _, clock, _) = HandlerTestSetup.CreateWithSeed();
         var confirmHandler = new ConfirmPaymentHandler(reservations, clock);
-        var result = await confirmHandler.HandleAsync(
+        var result = await confirmHandler.Handle(
             new ConfirmPaymentRequest(Guid.NewGuid()));
 
         Assert.True(result.IsFailure);
@@ -395,13 +442,13 @@ public class ApplicationHandlerTests
         var (events, reservations, _, clock, eventId) = HandlerTestSetup.CreateWithSeed();
 
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
-        var reserveResult = await reserveHandler.HandleAsync(
+        var reserveResult = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 2, "Expired Buyer", "expired@test.com"));
         Assert.True(reserveResult.IsSuccess);
 
         var expiredClock = new FakeClock(clock.UtcNow.AddMinutes(16));
         var confirmHandler = new ConfirmPaymentHandler(reservations, expiredClock);
-        var result = await confirmHandler.HandleAsync(
+        var result = await confirmHandler.Handle(
             new ConfirmPaymentRequest(reserveResult.Data!.Id));
 
         Assert.True(result.IsFailure);
@@ -416,12 +463,12 @@ public class ApplicationHandlerTests
         var (events, reservations, _, clock, eventId) = HandlerTestSetup.CreateWithSeed();
 
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
-        var reserveResult = await reserveHandler.HandleAsync(
+        var reserveResult = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 5, "Cancel Test", "cancel@test.com"));
         Assert.True(reserveResult.IsSuccess);
 
         var cancelHandler = new CancelReservationHandler(reservations, events, clock);
-        var cancelResult = await cancelHandler.HandleAsync(
+        var cancelResult = await cancelHandler.Handle(
             new CancelReservationRequest(reserveResult.Data!.Id));
 
         Assert.True(cancelResult.IsSuccess);
@@ -434,16 +481,16 @@ public class ApplicationHandlerTests
         var (events, reservations, _, clock, eventId) = HandlerTestSetup.CreateWithSeed();
 
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
-        var reserveResult = await reserveHandler.HandleAsync(
+        var reserveResult = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 3, "Early", "early@test.com"));
         Assert.True(reserveResult.IsSuccess);
 
         var confirmHandler = new ConfirmPaymentHandler(reservations, clock);
-        await confirmHandler.HandleAsync(new ConfirmPaymentRequest(reserveResult.Data!.Id));
+        await confirmHandler.Handle(new ConfirmPaymentRequest(reserveResult.Data!.Id));
 
         // Event is in August, we're in June — well over 48h before
         var cancelHandler = new CancelReservationHandler(reservations, events, clock);
-        var cancelResult = await cancelHandler.HandleAsync(
+        var cancelResult = await cancelHandler.Handle(
             new CancelReservationRequest(reserveResult.Data!.Id));
 
         Assert.True(cancelResult.IsSuccess);
@@ -456,14 +503,14 @@ public class ApplicationHandlerTests
         var (events, reservations, _, clock, eventId) = HandlerTestSetup.CreateWithSeed();
 
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
-        var reserveResult = await reserveHandler.HandleAsync(
+        var reserveResult = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 1, "Canceled", "canceled@test.com"));
         Assert.True(reserveResult.IsSuccess);
 
         var cancelHandler = new CancelReservationHandler(reservations, events, clock);
-        await cancelHandler.HandleAsync(new CancelReservationRequest(reserveResult.Data!.Id));
+        await cancelHandler.Handle(new CancelReservationRequest(reserveResult.Data!.Id));
 
-        var secondCancel = await cancelHandler.HandleAsync(
+        var secondCancel = await cancelHandler.Handle(
             new CancelReservationRequest(reserveResult.Data!.Id));
 
         Assert.True(secondCancel.IsFailure);
@@ -476,18 +523,18 @@ public class ApplicationHandlerTests
         var (events, reservations, _, clock, eventId) = HandlerTestSetup.CreateWithSeed();
 
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
-        var reserveResult = await reserveHandler.HandleAsync(
+        var reserveResult = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 1, "Lost", "lost@test.com"));
         Assert.True(reserveResult.IsSuccess);
 
         var confirmHandler = new ConfirmPaymentHandler(reservations, clock);
-        await confirmHandler.HandleAsync(new ConfirmPaymentRequest(reserveResult.Data!.Id));
+        await confirmHandler.Handle(new ConfirmPaymentRequest(reserveResult.Data!.Id));
 
         var lateClock = new FakeClock(HandlerTestSetup.FutureDate.AddHours(-47));
         var cancelHandler = new CancelReservationHandler(reservations, events, lateClock);
-        await cancelHandler.HandleAsync(new CancelReservationRequest(reserveResult.Data!.Id));
+        await cancelHandler.Handle(new CancelReservationRequest(reserveResult.Data!.Id));
 
-        var secondCancel = await cancelHandler.HandleAsync(
+        var secondCancel = await cancelHandler.Handle(
             new CancelReservationRequest(reserveResult.Data!.Id));
 
         Assert.True(secondCancel.IsFailure);
@@ -503,14 +550,14 @@ public class ApplicationHandlerTests
 
         var handler = new CreateEventHandler(events, venues, clock);
         // Use venue 2 — no overlap with seed event in venue 3
-        var createResult = await handler.HandleAsync(
+        var createResult = await handler.Handle(
             new CreateEventRequest("To Cancel", "Valid event description", 2, 30,
                 HandlerTestSetup.FutureDate, HandlerTestSetup.FutureEnd,
                 50, "conferencia"));
         Assert.True(createResult.IsSuccess);
 
         var cancelHandler = new CancelEventHandler(events, clock);
-        var result = await cancelHandler.HandleAsync(
+        var result = await cancelHandler.Handle(
             new CancelEventRequest(createResult.Data!));
 
         Assert.True(result.IsSuccess);
@@ -527,16 +574,16 @@ public class ApplicationHandlerTests
 
         var handler = new CreateEventHandler(events, venues, clock);
         // Use venue 2 — no overlap
-        var createResult = await handler.HandleAsync(
+        var createResult = await handler.Handle(
             new CreateEventRequest("Already Canceled", "Valid event description", 2, 30,
                 HandlerTestSetup.FutureDate, HandlerTestSetup.FutureEnd,
                 50, "concierto"));
         Assert.True(createResult.IsSuccess);
 
         var cancelHandler = new CancelEventHandler(events, clock);
-        await cancelHandler.HandleAsync(new CancelEventRequest(createResult.Data!));
+        await cancelHandler.Handle(new CancelEventRequest(createResult.Data!));
 
-        var secondCancel = await cancelHandler.HandleAsync(
+        var secondCancel = await cancelHandler.Handle(
             new CancelEventRequest(createResult.Data!));
 
         Assert.True(secondCancel.IsFailure);
@@ -552,12 +599,12 @@ public class ApplicationHandlerTests
         var (events, _, venues, clock, _) = HandlerTestSetup.CreateWithSeed();
 
         var handler = new CreateEventHandler(events, venues, clock);
-        await handler.HandleAsync(new CreateEventRequest(
+        await handler.Handle(new CreateEventRequest(
             "Workshop", "Workshop description", 2, 30,
             HandlerTestSetup.FutureDate, HandlerTestSetup.FutureEnd, 30, "taller"));
 
         var listHandler = new ListEventsHandler(events, clock);
-        var result = await listHandler.HandleAsync(new ListEventsQuery(Type: "taller"));
+        var result = await listHandler.Handle(new ListEventsQuery(Type: "taller"));
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Data);
@@ -570,13 +617,13 @@ public class ApplicationHandlerTests
         var (events, _, venues, clock, _) = HandlerTestSetup.CreateWithSeed();
 
         var handler = new CreateEventHandler(events, venues, clock);
-        await handler.HandleAsync(new CreateEventRequest(
+        await handler.Handle(new CreateEventRequest(
             "Festival Bogotá", "Festival description", 2, 30,
             HandlerTestSetup.FutureDate, HandlerTestSetup.FutureEnd,
             50, "conferencia"));
 
         var listHandler = new ListEventsHandler(events, clock);
-        var result = await listHandler.HandleAsync(
+        var result = await listHandler.Handle(
             new ListEventsQuery(TitleSearch: "festival"));
 
         Assert.True(result.IsSuccess);
@@ -594,7 +641,7 @@ public class ApplicationHandlerTests
         var handler = new CreateEventHandler(events, venues, earlyClock);
         var pastStart = new DateTimeOffset(2026, 5, 15, 14, 0, 0, TimeSpan.Zero);
         var pastEnd = new DateTimeOffset(2026, 5, 15, 16, 0, 0, TimeSpan.Zero);
-        var createResult = await handler.HandleAsync(
+        var createResult = await handler.Handle(
             new CreateEventRequest("Completed Past Event", "Valid event description", 2, 30,
                 pastStart, pastEnd, 50, "taller"));
         Assert.True(createResult.IsSuccess);
@@ -602,7 +649,7 @@ public class ApplicationHandlerTests
         // Query with a clock AFTER the event's end time
         var laterClock = new FakeClock(new DateTimeOffset(2026, 6, 1, 14, 0, 0, TimeSpan.Zero));
         var listHandler = new ListEventsHandler(events, laterClock);
-        var result = await listHandler.HandleAsync(
+        var result = await listHandler.Handle(
             new ListEventsQuery(Status: "completado"));
 
         Assert.True(result.IsSuccess);
@@ -619,7 +666,7 @@ public class ApplicationHandlerTests
 
         // Seed event is in the future (August), clock is June — it should be Activo
         var listHandler = new ListEventsHandler(events, clock);
-        var result = await listHandler.HandleAsync(
+        var result = await listHandler.Handle(
             new ListEventsQuery(Status: "activo"));
 
         Assert.True(result.IsSuccess);
@@ -634,7 +681,7 @@ public class ApplicationHandlerTests
         var (events, _, _, clock, eventId) = HandlerTestSetup.CreateWithSeed();
         var handler = new GetEventHandler(events, clock);
 
-        var result = await handler.HandleAsync(new GetEventQuery(eventId));
+        var result = await handler.Handle(new GetEventQuery(eventId));
 
         Assert.True(result.IsSuccess);
         Assert.Equal("conferencia", result.Data!.Type);
@@ -652,7 +699,7 @@ public class ApplicationHandlerTests
         {
             var start = HandlerTestSetup.FutureDate.AddDays((i + 1) * 7);
             var end = start.AddHours(2);
-            await handler.HandleAsync(new CreateEventRequest(
+            await handler.Handle(new CreateEventRequest(
                 $"Pagination Event {i + 1}", "Pagination event description", 3, 50,
                 start, end, 30, "taller"));
         }
@@ -660,7 +707,7 @@ public class ApplicationHandlerTests
         var listHandler = new ListEventsHandler(events, clock);
 
         // Page 1 with pageSize 2
-        var page1 = await listHandler.HandleAsync(new ListEventsQuery(PageSize: 2, PageNumber: 1));
+        var page1 = await listHandler.Handle(new ListEventsQuery(PageSize: 2, PageNumber: 1));
         Assert.True(page1.IsSuccess);
         Assert.NotNull(page1.Data);
         Assert.Equal(2, page1.Data.Items.Count);
@@ -670,7 +717,7 @@ public class ApplicationHandlerTests
         Assert.True(page1.Data.HasNextPage);
 
         // Page 2 with pageSize 2
-        var page2 = await listHandler.HandleAsync(new ListEventsQuery(PageSize: 2, PageNumber: 2));
+        var page2 = await listHandler.Handle(new ListEventsQuery(PageSize: 2, PageNumber: 2));
         Assert.True(page2.IsSuccess);
         Assert.Equal(2, page2.Data!.Items.Count);
         Assert.True(page2.Data.HasPreviousPage);
@@ -687,7 +734,7 @@ public class ApplicationHandlerTests
         var (events, _, _, clock, _) = HandlerTestSetup.CreateWithSeed();
         var handler = new ListEventsHandler(events, clock);
 
-        var result = await handler.HandleAsync(new ListEventsQuery(PageNumber: 0));
+        var result = await handler.Handle(new ListEventsQuery(PageNumber: 0));
         Assert.True(result.IsFailure);
     }
 
@@ -697,10 +744,10 @@ public class ApplicationHandlerTests
         var (events, _, _, clock, _) = HandlerTestSetup.CreateWithSeed();
         var handler = new ListEventsHandler(events, clock);
 
-        var result = await handler.HandleAsync(new ListEventsQuery(PageSize: 0));
+        var result = await handler.Handle(new ListEventsQuery(PageSize: 0));
         Assert.True(result.IsFailure);
 
-        result = await handler.HandleAsync(new ListEventsQuery(PageSize: 51));
+        result = await handler.Handle(new ListEventsQuery(PageSize: 101));
         Assert.True(result.IsFailure);
     }
 
@@ -716,7 +763,7 @@ public class ApplicationHandlerTests
 
         // Create event
         var createHandler = new CreateEventHandler(events, venues, clock);
-        var createResult = await createHandler.HandleAsync(
+        var createResult = await createHandler.Handle(
             new CreateEventRequest("Report Event", "Valid event description", 1, 100,
                 HandlerTestSetup.FutureDate, HandlerTestSetup.FutureEnd,
                 50, "conferencia"));
@@ -727,29 +774,29 @@ public class ApplicationHandlerTests
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
         var confirmHandler = new ConfirmPaymentHandler(reservations, clock);
 
-        var r1 = await reserveHandler.HandleAsync(
+        var r1 = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 2, "Alice", "alice@test.com"));
         Assert.True(r1.IsSuccess);
-        await confirmHandler.HandleAsync(new ConfirmPaymentRequest(r1.Data!.Id));
+        await confirmHandler.Handle(new ConfirmPaymentRequest(r1.Data!.Id));
 
-        var r2 = await reserveHandler.HandleAsync(
+        var r2 = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 3, "Bob", "bob@test.com"));
         Assert.True(r2.IsSuccess);
-        await confirmHandler.HandleAsync(new ConfirmPaymentRequest(r2.Data!.Id));
+        await confirmHandler.Handle(new ConfirmPaymentRequest(r2.Data!.Id));
 
         // 1 lost reservation: confirm, then cancel late (< 48h before event)
-        var r3 = await reserveHandler.HandleAsync(
+        var r3 = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 2, "Carol", "carol@test.com"));
         Assert.True(r3.IsSuccess);
-        await confirmHandler.HandleAsync(new ConfirmPaymentRequest(r3.Data!.Id));
+        await confirmHandler.Handle(new ConfirmPaymentRequest(r3.Data!.Id));
 
         var lateClock = new FakeClock(HandlerTestSetup.FutureDate.AddHours(-47));
         var cancelHandler = new CancelReservationHandler(reservations, events, lateClock);
-        await cancelHandler.HandleAsync(new CancelReservationRequest(r3.Data!.Id));
+        await cancelHandler.Handle(new CancelReservationRequest(r3.Data!.Id));
 
         // Get report
         var reportHandler = new GetOccupancyReportHandler(events, reservations, clock);
-        var report = await reportHandler.HandleAsync(
+        var report = await reportHandler.Handle(
             new GetOccupancyReportQuery(eventId));
 
         Assert.True(report.IsSuccess);
@@ -770,7 +817,7 @@ public class ApplicationHandlerTests
 
         // Create a small-capacity event
         var createHandler = new CreateEventHandler(events, venues, clock);
-        var createResult = await createHandler.HandleAsync(
+        var createResult = await createHandler.Handle(
             new CreateEventRequest("Small Event", "Valid event description", 2, 10,
                 HandlerTestSetup.FutureDate, HandlerTestSetup.FutureEnd,
                 50, "conferencia"));
@@ -781,15 +828,15 @@ public class ApplicationHandlerTests
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
         var confirmHandler = new ConfirmPaymentHandler(reservations, clock);
 
-        var r1 = await reserveHandler.HandleAsync(
+        var r1 = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 5, "Alice", "alice@test.com"));
         Assert.True(r1.IsSuccess);
-        await confirmHandler.HandleAsync(new ConfirmPaymentRequest(r1.Data!.Id));
+        await confirmHandler.Handle(new ConfirmPaymentRequest(r1.Data!.Id));
 
-        var r2 = await reserveHandler.HandleAsync(
+        var r2 = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 5, "Bob", "bob@test.com"));
         Assert.True(r2.IsSuccess);
-        await confirmHandler.HandleAsync(new ConfirmPaymentRequest(r2.Data!.Id));
+        await confirmHandler.Handle(new ConfirmPaymentRequest(r2.Data!.Id));
 
         // Add overflow lost tickets directly (bypass handler policy) to test the Math.Max(0, …) guard
         var buyer = new Domain.ValueObjects.Buyer("Overflow", "overflow@test.com");
@@ -803,7 +850,7 @@ public class ApplicationHandlerTests
 
         // Report: 10 confirmed + 3 lost = 13 held > 10 capacity
         var reportHandler = new GetOccupancyReportHandler(events, reservations, clock);
-        var report = await reportHandler.HandleAsync(
+        var report = await reportHandler.Handle(
             new GetOccupancyReportQuery(eventId));
 
         Assert.True(report.IsSuccess);
@@ -822,16 +869,16 @@ public class ApplicationHandlerTests
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
         var confirmHandler = new ConfirmPaymentHandler(reservations, clock);
 
-        var confirmed = await reserveHandler.HandleAsync(
+        var confirmed = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 5, "Confirmed", "confirmed@test.com"));
         Assert.True(confirmed.IsSuccess);
-        await confirmHandler.HandleAsync(new ConfirmPaymentRequest(confirmed.Data!.Id));
+        await confirmHandler.Handle(new ConfirmPaymentRequest(confirmed.Data!.Id));
 
-        var pending = await reserveHandler.HandleAsync(
+        var pending = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 3, "Pending", "pending@test.com"));
         Assert.True(pending.IsSuccess);
 
-        var expired = await reserveHandler.HandleAsync(
+        var expired = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 4, "Expired", "expired-hold@test.com"));
         Assert.True(expired.IsSuccess);
 
@@ -856,7 +903,7 @@ public class ApplicationHandlerTests
         var clock = HandlerTestSetup.DefaultClock;
         var reportHandler = new GetOccupancyReportHandler(events, reservations, clock);
 
-        var result = await reportHandler.HandleAsync(
+        var result = await reportHandler.Handle(
             new GetOccupancyReportQuery(Guid.NewGuid()));
 
         Assert.True(result.IsFailure);
@@ -901,7 +948,7 @@ public class ApplicationHandlerTests
         var (events, _, venues, clock, eventId) = HandlerTestSetup.CreateWithSeed();
         var handler = new GetEventHandler(events, clock);
 
-        var result = await handler.HandleAsync(new GetEventQuery(eventId));
+        var result = await handler.Handle(new GetEventQuery(eventId));
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Data);
@@ -916,7 +963,7 @@ public class ApplicationHandlerTests
         var clock = HandlerTestSetup.DefaultClock;
         var handler = new GetEventHandler(events, clock);
 
-        var result = await handler.HandleAsync(new GetEventQuery(Guid.NewGuid()));
+        var result = await handler.Handle(new GetEventQuery(Guid.NewGuid()));
 
         Assert.True(result.IsFailure);
         Assert.Contains("not found", result.Error, StringComparison.OrdinalIgnoreCase);
@@ -930,7 +977,7 @@ public class ApplicationHandlerTests
         var (events, _, venues, clock, eventId) = HandlerTestSetup.CreateWithSeed();
         var handler = new UpdateEventHandler(events, venues, clock);
 
-        var result = await handler.HandleAsync(new UpdateEventRequest(
+        var result = await handler.Handle(new UpdateEventRequest(
             eventId, "Updated Title", "Updated description", 1, 80,
             HandlerTestSetup.FutureDate, HandlerTestSetup.FutureEnd, 60, "taller"));
 
@@ -949,7 +996,7 @@ public class ApplicationHandlerTests
         var clock = HandlerTestSetup.DefaultClock;
         var handler = new UpdateEventHandler(events, venues, clock);
 
-        var result = await handler.HandleAsync(new UpdateEventRequest(
+        var result = await handler.Handle(new UpdateEventRequest(
             Guid.NewGuid(), "Title", null, 1, 100,
             HandlerTestSetup.FutureDate, HandlerTestSetup.FutureEnd, 50, "conferencia"));
 
@@ -964,7 +1011,7 @@ public class ApplicationHandlerTests
         var handler = new UpdateEventHandler(events, venues, clock);
 
         // venue 3 has capacity 500, so 501 should fail
-        var result = await handler.HandleAsync(new UpdateEventRequest(
+        var result = await handler.Handle(new UpdateEventRequest(
             eventId, "Over Capacity", "Valid event description", 3, 501,
             HandlerTestSetup.FutureDate, HandlerTestSetup.FutureEnd, 50, "conferencia"));
 
@@ -980,11 +1027,11 @@ public class ApplicationHandlerTests
         var (events, reservations, _, clock, eventId) = HandlerTestSetup.CreateWithSeed();
 
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
-        await reserveHandler.HandleAsync(new ReserveTicketsRequest(eventId, 2, "Alice", "alice@test.com"));
-        await reserveHandler.HandleAsync(new ReserveTicketsRequest(eventId, 3, "Bob", "bob@test.com"));
+        await reserveHandler.Handle(new ReserveTicketsRequest(eventId, 2, "Alice", "alice@test.com"));
+        await reserveHandler.Handle(new ReserveTicketsRequest(eventId, 3, "Bob", "bob@test.com"));
 
         var listHandler = new ListReservationsHandler(reservations);
-        var result = await listHandler.HandleAsync(new ListReservationsQuery());
+        var result = await listHandler.Handle(new ListReservationsQuery());
 
         Assert.True(result.IsSuccess);
         Assert.Equal(2, result.Data!.Items.Count);
@@ -996,10 +1043,10 @@ public class ApplicationHandlerTests
         var (events, reservations, _, clock, eventId) = HandlerTestSetup.CreateWithSeed();
 
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
-        await reserveHandler.HandleAsync(new ReserveTicketsRequest(eventId, 2, "Alice", "alice@test.com"));
+        await reserveHandler.Handle(new ReserveTicketsRequest(eventId, 2, "Alice", "alice@test.com"));
 
         var listHandler = new ListReservationsHandler(reservations);
-        var result = await listHandler.HandleAsync(new ListReservationsQuery(EventId: eventId));
+        var result = await listHandler.Handle(new ListReservationsQuery(EventId: eventId));
 
         Assert.True(result.IsSuccess);
         Assert.Single(result.Data!.Items);
@@ -1013,14 +1060,14 @@ public class ApplicationHandlerTests
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
         for (var i = 0; i < 5; i++)
         {
-            await reserveHandler.HandleAsync(new ReserveTicketsRequest(
+            await reserveHandler.Handle(new ReserveTicketsRequest(
                 eventId, 1, $"User {i}", $"user{i}@test.com"));
         }
 
         var listHandler = new ListReservationsHandler(reservations);
 
         // Page 1 with pageSize 2
-        var page1 = await listHandler.HandleAsync(new ListReservationsQuery(PageSize: 2, PageNumber: 1));
+        var page1 = await listHandler.Handle(new ListReservationsQuery(PageSize: 2, PageNumber: 1));
         Assert.True(page1.IsSuccess);
         Assert.NotNull(page1.Data);
         Assert.Equal(2, page1.Data.Items.Count);
@@ -1030,7 +1077,7 @@ public class ApplicationHandlerTests
         Assert.True(page1.Data.HasNextPage);
 
         // Page 3 should have 1 item
-        var page3 = await listHandler.HandleAsync(new ListReservationsQuery(PageSize: 2, PageNumber: 3));
+        var page3 = await listHandler.Handle(new ListReservationsQuery(PageSize: 2, PageNumber: 3));
         Assert.True(page3.IsSuccess);
         Assert.Single(page3.Data!.Items);
         Assert.True(page3.Data.HasPreviousPage);
@@ -1043,13 +1090,13 @@ public class ApplicationHandlerTests
         var reservations = new InMemoryReservationRepository();
         var handler = new ListReservationsHandler(reservations);
 
-        var result = await handler.HandleAsync(new ListReservationsQuery(PageNumber: 0));
+        var result = await handler.Handle(new ListReservationsQuery(PageNumber: 0));
         Assert.True(result.IsFailure);
 
-        result = await handler.HandleAsync(new ListReservationsQuery(PageSize: 0));
+        result = await handler.Handle(new ListReservationsQuery(PageSize: 0));
         Assert.True(result.IsFailure);
 
-        result = await handler.HandleAsync(new ListReservationsQuery(PageSize: 51));
+        result = await handler.Handle(new ListReservationsQuery(PageSize: 101));
         Assert.True(result.IsFailure);
     }
 
@@ -1059,13 +1106,13 @@ public class ApplicationHandlerTests
         var (events, reservations, _, clock, eventId) = HandlerTestSetup.CreateWithSeed();
 
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
-        await reserveHandler.HandleAsync(new ReserveTicketsRequest(eventId, 2, "Alice", "alice@test.com"));
-        await reserveHandler.HandleAsync(new ReserveTicketsRequest(eventId, 3, "Bob", "bob@test.com"));
+        await reserveHandler.Handle(new ReserveTicketsRequest(eventId, 2, "Alice", "alice@test.com"));
+        await reserveHandler.Handle(new ReserveTicketsRequest(eventId, 3, "Bob", "bob@test.com"));
 
         var listHandler = new ListReservationsHandler(reservations);
 
         // Use snake_case as the frontend does
-        var result = await listHandler.HandleAsync(
+        var result = await listHandler.Handle(
             new ListReservationsQuery(Status: "pendiente_pago"));
 
         Assert.True(result.IsSuccess);
@@ -1080,13 +1127,13 @@ public class ApplicationHandlerTests
         var (events, reservations, _, clock, eventId) = HandlerTestSetup.CreateWithSeed();
 
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
-        await reserveHandler.HandleAsync(new ReserveTicketsRequest(eventId, 2, "Alice", "alice@test.com"));
-        await reserveHandler.HandleAsync(new ReserveTicketsRequest(eventId, 3, "Bob", "bob@test.com"));
+        await reserveHandler.Handle(new ReserveTicketsRequest(eventId, 2, "Alice", "alice@test.com"));
+        await reserveHandler.Handle(new ReserveTicketsRequest(eventId, 3, "Bob", "bob@test.com"));
 
         var listHandler = new ListReservationsHandler(reservations);
 
         // PascalCase enum name should also work
-        var result = await listHandler.HandleAsync(
+        var result = await listHandler.Handle(
             new ListReservationsQuery(Status: "PendientePago"));
 
         Assert.True(result.IsSuccess);
@@ -1100,7 +1147,7 @@ public class ApplicationHandlerTests
         var reservations = new InMemoryReservationRepository();
         var handler = new ListReservationsHandler(reservations);
 
-        var result = await handler.HandleAsync(
+        var result = await handler.Handle(
             new ListReservationsQuery(Status: "invalid_status"));
 
         Assert.True(result.IsFailure);
@@ -1115,12 +1162,12 @@ public class ApplicationHandlerTests
         var (events, reservations, _, clock, eventId) = HandlerTestSetup.CreateWithSeed();
 
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
-        var reserveResult = await reserveHandler.HandleAsync(
+        var reserveResult = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 2, "Get Test", "get@test.com"));
         Assert.True(reserveResult.IsSuccess);
 
         var getHandler = new GetReservationHandler(reservations);
-        var result = await getHandler.HandleAsync(new GetReservationQuery(reserveResult.Data!.Id));
+        var result = await getHandler.Handle(new GetReservationQuery(reserveResult.Data!.Id));
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Data);
@@ -1133,7 +1180,7 @@ public class ApplicationHandlerTests
         var reservations = new InMemoryReservationRepository();
         var handler = new GetReservationHandler(reservations);
 
-        var result = await handler.HandleAsync(new GetReservationQuery(Guid.NewGuid()));
+        var result = await handler.Handle(new GetReservationQuery(Guid.NewGuid()));
 
         Assert.True(result.IsFailure);
         Assert.Contains("not found", result.Error, StringComparison.OrdinalIgnoreCase);
@@ -1148,14 +1195,14 @@ public class ApplicationHandlerTests
 
         // Create a pending reservation
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
-        var reserveResult = await reserveHandler.HandleAsync(
+        var reserveResult = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 3, "Original Buyer", "original@test.com"));
         Assert.True(reserveResult.IsSuccess);
         var reservationId = reserveResult.Data!.Id;
 
         // Update the reservation
         var updateHandler = new UpdateReservationHandler(reservations, events, clock);
-        var updateResult = await updateHandler.HandleAsync(
+        var updateResult = await updateHandler.Handle(
             new UpdateReservationRequest(reservationId, 5, "Updated Buyer", "updated@test.com"));
 
         Assert.True(updateResult.IsSuccess);
@@ -1174,16 +1221,16 @@ public class ApplicationHandlerTests
 
         // Create a pending reservation then confirm it
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
-        var reserveResult = await reserveHandler.HandleAsync(
+        var reserveResult = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 2, "Confirmed Buyer", "confirmed@test.com"));
         Assert.True(reserveResult.IsSuccess);
 
         var confirmHandler = new ConfirmPaymentHandler(reservations, clock);
-        await confirmHandler.HandleAsync(new ConfirmPaymentRequest(reserveResult.Data!.Id));
+        await confirmHandler.Handle(new ConfirmPaymentRequest(reserveResult.Data!.Id));
 
         // Attempt to update the confirmed reservation
         var updateHandler = new UpdateReservationHandler(reservations, events, clock);
-        var updateResult = await updateHandler.HandleAsync(
+        var updateResult = await updateHandler.Handle(
             new UpdateReservationRequest(reserveResult.Data!.Id, 3, "New Name", "new@test.com"));
 
         Assert.True(updateResult.IsFailure);
@@ -1196,13 +1243,13 @@ public class ApplicationHandlerTests
         var (events, reservations, _, clock, eventId) = HandlerTestSetup.CreateWithSeed();
 
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
-        var reserveResult = await reserveHandler.HandleAsync(
+        var reserveResult = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 2, "Expired Edit", "expired-edit@test.com"));
         Assert.True(reserveResult.IsSuccess);
 
         var expiredClock = new FakeClock(clock.UtcNow.AddMinutes(16));
         var updateHandler = new UpdateReservationHandler(reservations, events, expiredClock);
-        var updateResult = await updateHandler.HandleAsync(
+        var updateResult = await updateHandler.Handle(
             new UpdateReservationRequest(reserveResult.Data!.Id, 3, "New Name", "new@test.com"));
 
         Assert.True(updateResult.IsFailure);
@@ -1216,21 +1263,21 @@ public class ApplicationHandlerTests
 
         // Create a pending reservation
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
-        var reserveResult = await reserveHandler.HandleAsync(
+        var reserveResult = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 2, "Capacity Test", "capacity@test.com"));
         Assert.True(reserveResult.IsSuccess);
 
         // Fill remaining capacity with confirmed reservations
         var confirmHandler = new ConfirmPaymentHandler(reservations, clock);
-        var r2 = await reserveHandler.HandleAsync(
+        var r2 = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 90, "Filler", "filler@test.com"));
         Assert.True(r2.IsSuccess);
-        await confirmHandler.HandleAsync(new ConfirmPaymentRequest(r2.Data!.Id));
+        await confirmHandler.Handle(new ConfirmPaymentRequest(r2.Data!.Id));
 
         // Attempt to update the pending reservation to more than available
         // Event capacity=100, confirmed=90, pending=2 (original), so adjusted pending=0, available=10
         var updateHandler = new UpdateReservationHandler(reservations, events, clock);
-        var updateResult = await updateHandler.HandleAsync(
+        var updateResult = await updateHandler.Handle(
             new UpdateReservationRequest(reserveResult.Data!.Id, 15, "Overflow", "overflow@test.com"));
 
         Assert.True(updateResult.IsFailure);
@@ -1244,13 +1291,13 @@ public class ApplicationHandlerTests
 
         // Create a pending reservation
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
-        var reserveResult = await reserveHandler.HandleAsync(
+        var reserveResult = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 2, "Email Test", "email@test.com"));
         Assert.True(reserveResult.IsSuccess);
 
         // Attempt to update with invalid email
         var updateHandler = new UpdateReservationHandler(reservations, events, clock);
-        var updateResult = await updateHandler.HandleAsync(
+        var updateResult = await updateHandler.Handle(
             new UpdateReservationRequest(reserveResult.Data!.Id, 3, "New Name", "not-an-email"));
 
         Assert.True(updateResult.IsFailure);
@@ -1264,7 +1311,7 @@ public class ApplicationHandlerTests
         var clock = HandlerTestSetup.DefaultClock;
 
         var handler = new UpdateReservationHandler(reservations, events, clock);
-        var result = await handler.HandleAsync(
+        var result = await handler.Handle(
             new UpdateReservationRequest(Guid.NewGuid(), 2, "Nobody", "nobody@test.com"));
 
         Assert.True(result.IsFailure);
@@ -1278,16 +1325,16 @@ public class ApplicationHandlerTests
 
         // Create a pending reservation then cancel it
         var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
-        var reserveResult = await reserveHandler.HandleAsync(
+        var reserveResult = await reserveHandler.Handle(
             new ReserveTicketsRequest(eventId, 2, "Canceled Buyer", "canceled@test.com"));
         Assert.True(reserveResult.IsSuccess);
 
         var cancelHandler = new CancelReservationHandler(reservations, events, clock);
-        await cancelHandler.HandleAsync(new CancelReservationRequest(reserveResult.Data!.Id));
+        await cancelHandler.Handle(new CancelReservationRequest(reserveResult.Data!.Id));
 
         // Attempt to update the canceled reservation
         var updateHandler = new UpdateReservationHandler(reservations, events, clock);
-        var updateResult = await updateHandler.HandleAsync(
+        var updateResult = await updateHandler.Handle(
             new UpdateReservationRequest(reserveResult.Data!.Id, 3, "New Name", "new@test.com"));
 
         Assert.True(updateResult.IsFailure);

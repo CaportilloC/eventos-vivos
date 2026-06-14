@@ -7,10 +7,12 @@ public interface IReservationRepository
 {
     Task<Reservation?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<IReadOnlyList<Reservation>> GetByEventIdAsync(Guid eventId, CancellationToken ct = default);
-    Task<IReadOnlyList<Reservation>> GetFilteredAsync(
-        Guid? eventId = null,
-        string? status = null,
-        string? buyerEmail = null,
+    Task<PagedQueryResult<Reservation>> GetFilteredPageAsync(
+        Guid? eventId,
+        ReservationStatus? status,
+        string? buyerEmail,
+        int pageNumber,
+        int pageSize,
         CancellationToken ct = default);
     Task<bool> CodeExistsAsync(string code, CancellationToken ct = default);
     Task AddAsync(Reservation reservation, CancellationToken ct = default);

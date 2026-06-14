@@ -1,4 +1,5 @@
 using EventosVivos.Domain.Entities;
+using EventosVivos.Domain.Rules;
 using EventosVivos.Domain.Services;
 
 namespace EventosVivos.Domain.Policies;
@@ -25,7 +26,7 @@ public static class ReservationCancellationPolicy
 
         var hoursUntilEvent = (@event.Schedule.StartsAt - clock.UtcNow).TotalHours;
 
-        if (hoursUntilEvent >= 48)
+        if (hoursUntilEvent >= ReservationRules.LateCancellationPenaltyHours)
         {
             // Cancelada, release seats
             return (Result.Success(), true);

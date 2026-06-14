@@ -1,19 +1,20 @@
 using EventosVivos.Domain;
 using EventosVivos.Domain.Repositories;
 using EventosVivos.Application.DTOs;
+using MediatR;
 
-namespace EventosVivos.Application.Handlers;
+namespace EventosVivos.Application.Features.Reservations.Queries.GetReservationById;
 
 /// <summary>
 /// Query to get a single reservation by ID.
 /// </summary>
 /// <param name="ReservationId">Identifier of the reservation to retrieve.</param>
-public record GetReservationQuery(Guid ReservationId);
+public record GetReservationQuery(Guid ReservationId) : IRequest<Result<ReservationResponse>>;
 
 /// <summary>
 /// Handles fetching a single reservation by ID.
 /// </summary>
-public class GetReservationHandler
+public class GetReservationHandler : IRequestHandler<GetReservationQuery, Result<ReservationResponse>>
 {
     private readonly IReservationRepository _reservationRepository;
 
@@ -22,7 +23,7 @@ public class GetReservationHandler
         _reservationRepository = reservationRepository;
     }
 
-    public async Task<Result<ReservationResponse>> HandleAsync(
+    public async Task<Result<ReservationResponse>> Handle(
         GetReservationQuery query, CancellationToken ct = default)
     {
         var reservation = await _reservationRepository.GetByIdAsync(query.ReservationId, ct);

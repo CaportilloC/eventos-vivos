@@ -7,21 +7,27 @@ using EventosVivos.Domain.Services;
 using EventosVivos.Domain.ValueObjects;
 using EventosVivos.Application.Abstractions;
 using EventosVivos.Application.DTOs;
+using MediatR;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
-namespace EventosVivos.Application.Handlers;
+namespace EventosVivos.Application.Features.Events.Commands.UpdateEvent;
 
 /// <summary>
-/// Request to create a new event.
+/// Request to update an existing event.
+/// Only mutable fields are included. Rejects updates on canceled or completed events.
 /// </summary>
+/// <param name="EventId">Identifier of the event to update.</param>
 /// <param name="Title">Event title (5–100 characters).</param>
 /// <param name="Description">Event description (10–500 characters).</param>
-/// <param name="VenueId">Identifier of the venue where the event takes place.</param>
-/// <param name="MaxCapacity">Maximum number of tickets. Cannot exceed the venue's capacity (RN-01).</param>
-/// <param name="StartsAt">Event start date/time. Must be in the future.</param>
+/// <param name="VenueId">Identifier of the venue.</param>
+/// <param name="MaxCapacity">Maximum tickets. Cannot exceed venue capacity (RN-01).</param>
+/// <param name="StartsAt">Event start date/time.</param>
 /// <param name="EndsAt">Event end date/time. Weekend events must end by 22:00 (RN-03).</param>
-/// <param name="Price">Ticket price in COP. Must be greater than zero.</param>
+/// <param name="Price">Ticket price in COP.</param>
 /// <param name="Type">Event type: conferencia, taller, or concierto.</param>
-public record CreateEventRequest(
+public record UpdateEventRequest(
+    Guid EventId,
     string Title,
     string? Description,
     int VenueId,
@@ -29,41 +35,58 @@ public record CreateEventRequest(
     DateTimeOffset StartsAt,
     DateTimeOffset EndsAt,
     decimal Price,
-    string Type);
+    string Type) : IRequest<Result>;
 
 /// <summary>
-/// Handles event creation: validates business rules, checks venue capacity,
-/// prevents venue overlap (RN-02), and persists the event.
+/// Handles event updates: validates business rules, checks venue capacity,
+/// prevents venue overlap excluding current event (RN-02), and persists changes.
+/// Rejects updates on canceled or completed events.
 /// </summary>
-public class CreateEventHandler
+public class UpdateEventHandler : IRequestHandler<UpdateEventRequest, Result>
 {
     private readonly IEventRepository _eventRepository;
     private readonly IVenueRepository _venueRepository;
     private readonly IClock _clock;
     private readonly ITransactionRunner _transactionRunner;
+    private readonly ILogger<UpdateEventHandler> _logger;
 
-    public CreateEventHandler(
+    public UpdateEventHandler(
         IEventRepository eventRepository,
         IVenueRepository venueRepository,
         IClock clock,
-        ITransactionRunner? transactionRunner = null)
+        ITransactionRunner? transactionRunner = null,
+        ILogger<UpdateEventHandler>? logger = null)
     {
         _eventRepository = eventRepository;
         _venueRepository = venueRepository;
         _clock = clock;
         _transactionRunner = transactionRunner ?? new NoopTransactionRunner();
+        _logger = logger ?? NullLogger<UpdateEventHandler>.Instance;
     }
 
-    public async Task<Result<Guid>> HandleAsync(CreateEventRequest request, CancellationToken ct = default)
+    public async Task<Result> Handle(UpdateEventRequest request, CancellationToken ct = default)
     {
+        // Load existing event
+        var @event = await _eventRepository.GetByIdAsync(request.EventId, ct);
+        if (@event is null)
+            return Result.Failure($"Event with ID {request.EventId} not found.", ErrorType.NotFound);
+
+        // Reject updates on canceled or completed events
+        if (@event.IsCanceled)
+            return Result.Failure("Cannot update a canceled event.");
+
+        var publicStatus = EventStatusPolicy.GetPublicStatus(@event, _clock);
+        if (publicStatus == EventStatus.Completado)
+            return Result.Failure("Cannot update a completed event.");
+
         // Resolve event type
         if (!EventTypeApiMapper.TryParse(request.Type, out var eventType))
-            return Result<Guid>.Failure($"Invalid event type '{request.Type}'. Use conferencia, taller, or concierto.", ErrorType.Validation);
+            return Result.Failure($"Invalid event type '{request.Type}'. Use conferencia, taller, or concierto.", ErrorType.Validation);
 
         // Resolve venue
         var venue = await _venueRepository.GetByIdAsync(request.VenueId, ct);
         if (venue is null)
-            return Result<Guid>.Failure($"Venue with ID {request.VenueId} not found.", ErrorType.NotFound);
+            return Result.Failure($"Venue with ID {request.VenueId} not found.", ErrorType.NotFound);
 
         // Build value objects
         Money price;
@@ -75,14 +98,14 @@ public class CreateEventHandler
         }
         catch (ArgumentException ex)
         {
-            return Result<Guid>.Failure(ex.Message, ErrorType.Validation);
+            return Result.Failure(ex.Message, ErrorType.Validation);
         }
 
-        // RN-01/RN-03: Event creation policy
+        // RN-01/RN-03: Event creation policy (same rules apply to updates)
         var policyResult = EventCreationPolicy.Validate(
             request.Title, request.Description, request.MaxCapacity, venue.Capacity, schedule, _clock);
         if (policyResult.IsFailure)
-            return Result<Guid>.Failure(policyResult.Error!, policyResult.ErrorType);
+            return Result.Failure(policyResult.Error!, policyResult.ErrorType);
 
         return await _transactionRunner.RunSerializableAsync(async transactionCt =>
         {
@@ -90,13 +113,14 @@ public class CreateEventHandler
             // Interval-overlap constraints are impractical as a simple relational unique constraint.
             var venueEvents = await _eventRepository.GetByVenueIdAsync(request.VenueId, transactionCt);
             var hasOverlap = venueEvents.Any(e =>
+                e.Id != request.EventId &&
                 !e.IsCanceled &&
                 e.Schedule.StartsAt < schedule.EndsAt &&
                 e.Schedule.EndsAt > schedule.StartsAt);
             if (hasOverlap)
-                return Result<Guid>.Failure("The venue already has an active event overlapping with this time slot.");
+                return Result.Failure("The venue already has an active event overlapping with this time slot.");
 
-            var @event = new Event(
+            @event.Update(
                 request.Title,
                 eventType,
                 request.VenueId,
@@ -105,8 +129,13 @@ public class CreateEventHandler
                 schedule,
                 request.Description);
 
-            await _eventRepository.AddAsync(@event, transactionCt);
-            return Result<Guid>.Success(@event.Id);
+            await _eventRepository.UpdateAsync(@event, transactionCt);
+            _logger.LogInformation(
+                "Event updated {EventId} at venue {VenueId} with capacity {MaxCapacity}",
+                @event.Id,
+                @event.VenueId,
+                @event.MaxCapacity);
+            return Result.Success();
         }, ct);
     }
 }

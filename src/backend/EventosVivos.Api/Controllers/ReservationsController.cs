@@ -1,7 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using EventosVivos.Application.DTOs;
-using EventosVivos.Application.Handlers;
+using EventosVivos.Application.Features.Reservations.Commands.CancelReservation;
+using EventosVivos.Application.Features.Reservations.Commands.ConfirmPayment;
+using EventosVivos.Application.Features.Reservations.Commands.CreateReservation;
+using EventosVivos.Application.Features.Reservations.Commands.UpdateReservation;
+using EventosVivos.Application.Features.Reservations.Queries.GetReservationById;
+using EventosVivos.Application.Features.Reservations.Queries.ListReservations;
+using MediatR;
 
 namespace EventosVivos.Api.Controllers;
 
@@ -16,28 +22,9 @@ namespace EventosVivos.Api.Controllers;
 [SwaggerTag("Reservation lifecycle — create, confirm, cancel, update, and list reservations")]
 public class ReservationsController : ControllerBase
 {
-    private readonly ReserveTicketsHandler _reserveHandler;
-    private readonly ConfirmPaymentHandler _confirmHandler;
-    private readonly CancelReservationHandler _cancelHandler;
-    private readonly ListReservationsHandler _listHandler;
-    private readonly GetReservationHandler _getHandler;
-    private readonly UpdateReservationHandler _updateHandler;
+    private readonly ISender _sender;
 
-    public ReservationsController(
-        ReserveTicketsHandler reserveHandler,
-        ConfirmPaymentHandler confirmHandler,
-        CancelReservationHandler cancelHandler,
-        ListReservationsHandler listHandler,
-        GetReservationHandler getHandler,
-        UpdateReservationHandler updateHandler)
-    {
-        _reserveHandler = reserveHandler;
-        _confirmHandler = confirmHandler;
-        _cancelHandler = cancelHandler;
-        _listHandler = listHandler;
-        _getHandler = getHandler;
-        _updateHandler = updateHandler;
-    }
+    public ReservationsController(ISender sender) => _sender = sender;
 
     /// <summary>Create a pending reservation.</summary>
     /// <remarks>
@@ -68,7 +55,7 @@ public class ReservationsController : ControllerBase
         [FromBody] ReserveTicketsRequest request,
         CancellationToken ct)
     {
-        var result = await _reserveHandler.HandleAsync(request, ct);
+        var result = await _sender.Send(request, ct);
         if (result.IsFailure)
             return this.ToProblem(result);
 
@@ -85,7 +72,7 @@ public class ReservationsController : ControllerBase
     /// <param name="status">Filter by status (pendiente_pago, confirmada, cancelada, perdida).</param>
     /// <param name="buyerEmail">Filter by buyer email (partial match).</param>
     /// <param name="pageNumber">Page number (1-based, default 1).</param>
-    /// <param name="pageSize">Items per page (1-50, default 10).</param>
+    /// <param name="pageSize">Items per page (1-100, default 10).</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Paged list of matching reservations.</returns>
     [HttpGet]
@@ -110,7 +97,7 @@ public class ReservationsController : ControllerBase
             PageNumber: pageNumber,
             PageSize: pageSize);
 
-        var result = await _listHandler.HandleAsync(query, ct);
+        var result = await _sender.Send(query, ct);
         if (result.IsFailure)
             return this.ToProblem(result);
 
@@ -133,7 +120,7 @@ public class ReservationsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
-        var result = await _getHandler.HandleAsync(new GetReservationQuery(id), ct);
+        var result = await _sender.Send(new GetReservationQuery(id), ct);
         if (result.IsFailure)
             return this.ToProblem(result);
 
@@ -161,7 +148,7 @@ public class ReservationsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> ConfirmPayment(Guid id, CancellationToken ct)
     {
-        var result = await _confirmHandler.HandleAsync(new ConfirmPaymentRequest(id), ct);
+        var result = await _sender.Send(new ConfirmPaymentRequest(id), ct);
         if (result.IsFailure)
             return this.ToProblem(result);
 
@@ -191,7 +178,7 @@ public class ReservationsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Cancel(Guid id, CancellationToken ct)
     {
-        var result = await _cancelHandler.HandleAsync(new CancelReservationRequest(id), ct);
+        var result = await _sender.Send(new CancelReservationRequest(id), ct);
         if (result.IsFailure)
             return this.ToProblem(result);
 
@@ -223,9 +210,9 @@ public class ReservationsController : ControllerBase
         CancellationToken ct)
     {
         if (id != request.ReservationId)
-            return Problem(statusCode: 400, detail: "ID mismatch between route and request body.");
+            return this.ToProblem(StatusCodes.Status400BadRequest, "ID mismatch between route and request body.", "Validation");
 
-        var result = await _updateHandler.HandleAsync(request, ct);
+        var result = await _sender.Send(request, ct);
         if (result.IsFailure)
             return this.ToProblem(result);
 

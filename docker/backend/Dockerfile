@@ -23,9 +23,14 @@ RUN dotnet publish -c Release -o /app --no-restore
 # ──────────────────────────────────────────────────────────────
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app .
 
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -fsS http://localhost:8080/health/ready || exit 1
 
 ENTRYPOINT ["dotnet", "EventosVivos.Api.dll"]

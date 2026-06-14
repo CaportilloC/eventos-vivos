@@ -1,5 +1,5 @@
 using FluentValidation;
-using EventosVivos.Application.Handlers;
+using EventosVivos.Application.Features.Events.Queries.ListEvents;
 
 namespace EventosVivos.Application.Validators;
 

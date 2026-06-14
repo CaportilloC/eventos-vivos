@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using EventosVivos.Application.DTOs;
-using EventosVivos.Application.Handlers;
+using EventosVivos.Application.Features.Reports.Queries.GetOccupancyReport;
+using MediatR;
 
 namespace EventosVivos.Api.Controllers;
 
@@ -13,12 +14,9 @@ namespace EventosVivos.Api.Controllers;
 [SwaggerTag("Reports — occupancy metrics and analytics per event")]
 public class ReportsController : ControllerBase
 {
-    private readonly GetOccupancyReportHandler _reportHandler;
+    private readonly ISender _sender;
 
-    public ReportsController(GetOccupancyReportHandler reportHandler)
-    {
-        _reportHandler = reportHandler;
-    }
+    public ReportsController(ISender sender) => _sender = sender;
 
     /// <summary>Get occupancy report by event.</summary>
     /// <remarks>
@@ -43,7 +41,7 @@ public class ReportsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetOccupancyReport(Guid id, CancellationToken ct)
     {
-        var result = await _reportHandler.HandleAsync(new GetOccupancyReportQuery(id), ct);
+        var result = await _sender.Send(new GetOccupancyReportQuery(id), ct);
         if (result.IsFailure)
             return this.ToProblem(result);
 

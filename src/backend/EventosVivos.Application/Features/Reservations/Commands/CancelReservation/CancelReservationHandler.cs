@@ -4,14 +4,17 @@ using EventosVivos.Domain.Policies;
 using EventosVivos.Domain.Repositories;
 using EventosVivos.Domain.Services;
 using EventosVivos.Application.DTOs;
+using MediatR;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
-namespace EventosVivos.Application.Handlers;
+namespace EventosVivos.Application.Features.Reservations.Commands.CancelReservation;
 
 /// <summary>
 /// Request to cancel a reservation.
 /// </summary>
 /// <param name="ReservationId">Identifier of the reservation to cancel.</param>
-public record CancelReservationRequest(Guid ReservationId);
+public record CancelReservationRequest(Guid ReservationId) : IRequest<Result<ReservationResponse>>;
 
 /// <summary>
 /// Handles reservation cancellation:
@@ -20,23 +23,26 @@ public record CancelReservationRequest(Guid ReservationId);
 /// - confirmada reservations canceled less than 48h before the event become perdida and do not release seats.
 /// - cancelada/perdida reservations are rejected.
 /// </summary>
-public class CancelReservationHandler
+public class CancelReservationHandler : IRequestHandler<CancelReservationRequest, Result<ReservationResponse>>
 {
     private readonly IReservationRepository _reservationRepository;
     private readonly IEventRepository _eventRepository;
     private readonly IClock _clock;
+    private readonly ILogger<CancelReservationHandler> _logger;
 
     public CancelReservationHandler(
         IReservationRepository reservationRepository,
         IEventRepository eventRepository,
-        IClock clock)
+        IClock clock,
+        ILogger<CancelReservationHandler>? logger = null)
     {
         _reservationRepository = reservationRepository;
         _eventRepository = eventRepository;
         _clock = clock;
+        _logger = logger ?? NullLogger<CancelReservationHandler>.Instance;
     }
 
-    public async Task<Result<ReservationResponse>> HandleAsync(
+    public async Task<Result<ReservationResponse>> Handle(
         CancelReservationRequest request, CancellationToken ct = default)
     {
         var reservation = await _reservationRepository.GetByIdAsync(request.ReservationId, ct);
@@ -97,6 +103,11 @@ public class CancelReservationHandler
         }
 
         await _reservationRepository.UpdateAsync(reservation, ct);
+        _logger.LogInformation(
+            "Reservation canceled {ReservationId} for event {EventId} with status {Status}",
+            reservation.Id,
+            reservation.EventId,
+            reservation.Status);
 
         return Result<ReservationResponse>.Success(ReservationResponseMapper.FromReservation(reservation));
     }

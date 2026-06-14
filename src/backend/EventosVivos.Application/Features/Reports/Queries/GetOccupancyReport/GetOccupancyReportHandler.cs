@@ -3,20 +3,21 @@ using EventosVivos.Domain.Policies;
 using EventosVivos.Domain.Repositories;
 using EventosVivos.Domain.Services;
 using EventosVivos.Application.DTOs;
+using MediatR;
 
-namespace EventosVivos.Application.Handlers;
+namespace EventosVivos.Application.Features.Reports.Queries.GetOccupancyReport;
 
 /// <summary>
 /// Query to get the occupancy report for a specific event.
 /// </summary>
 /// <param name="EventId">Identifier of the event to get the occupancy report for.</param>
-public record GetOccupancyReportQuery(Guid EventId);
+public record GetOccupancyReportQuery(Guid EventId) : IRequest<Result<OccupancyReportResponse>>;
 
 /// <summary>
 /// Handles occupancy report generation: computes confirmed tickets, lost tickets,
 /// available seats, occupancy percentage, and revenue.
 /// </summary>
-public class GetOccupancyReportHandler
+public class GetOccupancyReportHandler : IRequestHandler<GetOccupancyReportQuery, Result<OccupancyReportResponse>>
 {
     private readonly IEventRepository _eventRepository;
     private readonly IReservationRepository _reservationRepository;
@@ -32,7 +33,7 @@ public class GetOccupancyReportHandler
         _clock = clock;
     }
 
-    public async Task<Result<OccupancyReportResponse>> HandleAsync(
+    public async Task<Result<OccupancyReportResponse>> Handle(
         GetOccupancyReportQuery query, CancellationToken ct = default)
     {
         var @event = await _eventRepository.GetByIdAsync(query.EventId, ct);

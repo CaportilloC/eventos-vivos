@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using EventosVivos.Domain.Rules;
 
 namespace EventosVivos.Domain.ValueObjects;
 
@@ -9,8 +10,12 @@ public partial record Buyer
 
     public Buyer(string name, string email)
     {
-        if (string.IsNullOrWhiteSpace(name) || name.Length < 2 || name.Length > 100)
-            throw new ArgumentException("Name must be between 2 and 100 characters.", nameof(name));
+        if (string.IsNullOrWhiteSpace(name) || name.Length < ReservationRules.BuyerNameMinLength || name.Length > ReservationRules.BuyerNameMaxLength)
+            throw new ArgumentException($"Name must be between {ReservationRules.BuyerNameMinLength} and {ReservationRules.BuyerNameMaxLength} characters.", nameof(name));
+
+        if (email.Length > ReservationRules.BuyerEmailMaxLength)
+            throw new ArgumentException($"Email must not exceed {ReservationRules.BuyerEmailMaxLength} characters.", nameof(email));
+
         if (!EmailRegex().IsMatch(email))
             throw new ArgumentException("Email is not valid.", nameof(email));
 

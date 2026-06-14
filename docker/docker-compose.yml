@@ -31,6 +31,12 @@ services:
       DemoData__ResetBeforeSeed: "true"
     ports:
       - "5000:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     depends_on:
       sqlserver:
         condition: service_healthy

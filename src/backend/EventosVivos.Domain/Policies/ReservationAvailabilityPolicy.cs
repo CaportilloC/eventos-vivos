@@ -1,4 +1,5 @@
 using EventosVivos.Domain.Entities;
+using EventosVivos.Domain.Rules;
 using EventosVivos.Domain.Services;
 using EventosVivos.Domain.ValueObjects;
 
@@ -29,15 +30,19 @@ public static class ReservationAvailabilityPolicy
         var bogotaStart = TimeZoneInfo.ConvertTime(@event.Schedule.StartsAt, ColombiaTime.Info);
         var hoursUntilStart = (bogotaStart - bogotaNow).TotalHours;
 
-        if (hoursUntilStart < 1)
+        if (hoursUntilStart < ReservationRules.LatestReservationHoursBeforeStart)
             return Result.Failure(
                 "Cannot reserve: event starts in less than 1 hour.");
 
         // Less than 24 hours: max 5
-        var maxByTime = hoursUntilStart < 24 ? 5 : int.MaxValue;
+        var maxByTime = hoursUntilStart < ReservationRules.LastDayWindowHours
+            ? ReservationRules.LastDayMaxTickets
+            : int.MaxValue;
 
         // RN-05: price > 100: max 10
-        var maxByPrice = @event.Price.Amount > 100 ? 10 : int.MaxValue;
+        var maxByPrice = @event.Price.Amount > ReservationRules.HighPriceThreshold
+            ? ReservationRules.HighPriceMaxTickets
+            : int.MaxValue;
 
         // Strictest limit wins
         var effectiveMax = Math.Min(maxByTime, maxByPrice);

@@ -9,7 +9,81 @@ namespace EventosVivos.Infrastructure.Data.Seed;
 
 public static class DemoDataSeeder
 {
-    private const string DemoTitlePrefix = "Demo | ";
+    private static readonly SeedBuyer[] Buyers =
+    [
+        new("Laura Gomez", "laura.gomez@example.com"),
+        new("Carlos Ramirez", "carlos.ramirez@example.com"),
+        new("Natalia Torres", "natalia.torres@example.com"),
+        new("Andres Mejia", "andres.mejia@example.com"),
+        new("Valentina Rojas", "valentina.rojas@example.com"),
+        new("Miguel Herrera", "miguel.herrera@example.com"),
+        new("Paula Castro", "paula.castro@example.com"),
+        new("Santiago Ruiz", "santiago.ruiz@example.com"),
+        new("Diana Moreno", "diana.moreno@example.com"),
+        new("Camila Restrepo", "camila.restrepo@example.com"),
+        new("Juan Pablo Ospina", "juan.ospina@example.com"),
+        new("Manuela Arias", "manuela.arias@example.com"),
+        new("Felipe Cardenas", "felipe.cardenas@example.com"),
+        new("Isabella Montoya", "isabella.montoya@example.com"),
+        new("Sebastian Quintero", "sebastian.quintero@example.com"),
+        new("Daniela Giraldo", "daniela.giraldo@example.com"),
+        new("Mateo Salazar", "mateo.salazar@example.com"),
+        new("Mariana Valencia", "mariana.valencia@example.com"),
+        new("Julian Pineda", "julian.pineda@example.com"),
+        new("Sofia Bernal", "sofia.bernal@example.com"),
+        new("Alejandro Vargas", "alejandro.vargas@example.com"),
+        new("Luisa Fernanda Diaz", "luisa.diaz@example.com"),
+        new("Nicolas Cifuentes", "nicolas.cifuentes@example.com"),
+        new("Tatiana Acosta", "tatiana.acosta@example.com"),
+        new("Esteban Rios", "esteban.rios@example.com"),
+        new("Carolina Medina", "carolina.medina@example.com"),
+        new("Jorge Andres Franco", "jorge.franco@example.com"),
+        new("Maria Jose Lopez", "maria.lopez@example.com"),
+        new("David Camacho", "david.camacho@example.com"),
+        new("Ana Maria Ceballos", "ana.ceballos@example.com"),
+        new("Cristian Bedoya", "cristian.bedoya@example.com"),
+        new("Sara Pulido", "sara.pulido@example.com"),
+        new("Oscar Villamizar", "oscar.villamizar@example.com"),
+        new("Catalina Duarte", "catalina.duarte@example.com"),
+        new("Ricardo Benitez", "ricardo.benitez@example.com"),
+        new("Veronica Mesa", "veronica.mesa@example.com"),
+        new("Hernan Castillo", "hernan.castillo@example.com"),
+        new("Monica Villalba", "monica.villalba@example.com"),
+        new("Tomas Prieto", "tomas.prieto@example.com"),
+        new("Adriana Pardo", "adriana.pardo@example.com"),
+        new("Kevin Munoz", "kevin.munoz@example.com"),
+        new("Juliana Robledo", "juliana.robledo@example.com"),
+        new("Diego Forero", "diego.forero@example.com"),
+        new("Marcela Guzman", "marcela.guzman@example.com"),
+        new("Rafael Carvajal", "rafael.carvajal@example.com"),
+        new("Gabriela Naranjo", "gabriela.naranjo@example.com"),
+        new("Emilio Andrade", "emilio.andrade@example.com"),
+        new("Lorena Caceres", "lorena.caceres@example.com"),
+        new("Mauricio Gallego", "mauricio.gallego@example.com"),
+        new("Viviana Soto", "viviana.soto@example.com"),
+        new("Samuel Arango", "samuel.arango@example.com"),
+        new("Elena Buitrago", "elena.buitrago@example.com"),
+        new("Ivan Daza", "ivan.daza@example.com"),
+        new("Pilar Nieto", "pilar.nieto@example.com"),
+        new("German Leal", "german.leal@example.com"),
+        new("Claudia Rincon", "claudia.rincon@example.com"),
+        new("Brayan Maldonado", "brayan.maldonado@example.com"),
+        new("Angela Barrios", "angela.barrios@example.com"),
+        new("Jose Luis Ortega", "jose.ortega@example.com"),
+        new("Silvia Pena", "silvia.pena@example.com"),
+        new("Martin Avila", "martin.avila@example.com"),
+        new("Paola Trujillo", "paola.trujillo@example.com"),
+        new("Camilo Becerra", "camilo.becerra@example.com"),
+        new("Daniela Cardenas", "daniela.cardenas@example.com"),
+        new("Fernando Ibarra", "fernando.ibarra@example.com"),
+        new("Lina Marcela Rueda", "lina.rueda@example.com"),
+        new("Victor Hugo Molina", "victor.molina@example.com"),
+        new("Patricia Saavedra", "patricia.saavedra@example.com"),
+        new("Juanita Escobar", "juanita.escobar@example.com"),
+        new("Roberto Sarmiento", "roberto.sarmiento@example.com"),
+        new("Martha Lucía Vega", "martha.vega@example.com"),
+        new("Nelson Cuellar", "nelson.cuellar@example.com")
+    ];
 
     public static async Task SeedAsync(
         EventosVivosDbContext db,
@@ -28,9 +102,9 @@ public static class DemoDataSeeder
             await db.Reservations.ExecuteDeleteAsync(ct);
             await db.Events.ExecuteDeleteAsync(ct);
         }
-        else if (await db.Events.AnyAsync(e => e.Title.StartsWith(DemoTitlePrefix), ct))
+        else if (await db.Events.AnyAsync(ct))
         {
-            logger.LogInformation("Demo data already exists; skipping seed.");
+            logger.LogInformation("Platform seed data already exists; skipping seed.");
             return;
         }
 
@@ -39,23 +113,32 @@ public static class DemoDataSeeder
             .ToDictionaryAsync(v => v.Id, ct);
 
         if (venues.Count != 3)
-            throw new InvalidOperationException("Demo data requires venues with IDs 1, 2, and 3.");
+            throw new InvalidOperationException("Platform seed data requires venues with IDs 1, 2, and 3.");
 
         var nowBogota = ColombiaTime.NowInColombia(clock);
 
         var events = new[]
         {
-            CreateEvent("Cumbre de Innovacion Empresarial", EventType.Conferencia, 1, 180, 120000m, PastSchedule(nowBogota, 21, 18), "Conferencia ejecutiva sobre tecnologia, liderazgo y crecimiento regional."),
-            CreateEvent("Laboratorio de Producto Digital", EventType.Taller, 1, 120, 85000m, CurrentSchedule(nowBogota), "Taller practico para equipos que construyen productos digitales."),
-            CreateEvent("Noche Sinfonica Urbana", EventType.Concierto, 1, 180, 180000m, FutureSchedule(nowBogota, 7, 19), "Concierto de fusion orquestal y sonidos urbanos para publico general."),
+            CreateEvent("Midudev en Bogota: Frontend que Escala", EventType.Conferencia, 1, 160, 120000m, PastSchedule(nowBogota, 24, 18), "Charla tecnica sobre arquitectura frontend, rendimiento y buenas practicas para equipos web."),
+            CreateEvent("Taller de Ciberseguridad para Pymes", EventType.Taller, 1, 120, 85000m, PastSchedule(nowBogota, 18, 17), "Sesion practica para proteger correos, accesos, datos de clientes y operaciones digitales."),
+            CreateEvent("Diamante Eléctrico - Noche Capital", EventType.Concierto, 1, 180, 180000m, CurrentSchedule(nowBogota), "Concierto en formato electrico con repertorio de rock colombiano y artistas invitados."),
+            CreateEvent("Arquitectura de Software para Equipos Fintech", EventType.Conferencia, 1, 150, 120000m, FutureSchedule(nowBogota, 1, 18), "Encuentro sobre modularidad, deuda tecnica, observabilidad y decisiones de arquitectura."),
+            CreateEvent("Marketing Digital para Marcas Culturales", EventType.Taller, 1, 110, 65000m, FutureSchedule(nowBogota, 8, 18), "Workshop para planear campanas, medir audiencias y vender boleteria cultural con datos."),
+            CreateEvent("Enjambre - Segunda Fecha", EventType.Concierto, 1, 180, 220000m, FutureSchedule(nowBogota, 16, 20), "Segunda presentacion de Enjambre en Colombia con produccion completa para publico general."),
 
-            CreateEvent("Taller de Finanzas para Pymes", EventType.Taller, 2, 45, 45000m, PastSchedule(nowBogota, 18, 17), "Sesion aplicada de planeacion financiera para pequenas empresas."),
-            CreateEvent("Acustico Andino en Vivo", EventType.Concierto, 2, 45, 85000m, CurrentSchedule(nowBogota), "Formato intimo con repertorio andino contemporaneo y artistas invitados."),
-            CreateEvent("Foro Futuro del Turismo", EventType.Conferencia, 2, 45, 120000m, FutureSchedule(nowBogota, 8, 18), "Encuentro para analizar tendencias del turismo sostenible en Colombia."),
+            CreateEvent("Turismo Regenerativo en el Eje Cafetero", EventType.Conferencia, 2, 45, 65000m, PastSchedule(nowBogota, 22, 18), "Conversatorio sobre experiencias turisticas responsables, comunidades locales y sostenibilidad."),
+            CreateEvent("Autodefensa Urbana para Mujeres", EventType.Taller, 2, 42, 45000m, PastSchedule(nowBogota, 15, 16), "Taller introductorio de prevencion, lectura del entorno y tecnicas basicas de defensa personal."),
+            CreateEvent("Enjambre - Primera Fecha", EventType.Concierto, 2, 45, 180000m, CurrentSchedule(nowBogota), "Concierto intimo de Enjambre con cupo limitado y experiencia cercana al escenario."),
+            CreateEvent("Producto Digital para Startups Colombianas", EventType.Conferencia, 2, 45, 85000m, FutureSchedule(nowBogota, 1, 17), "Charla aplicada sobre descubrimiento, metricas, estrategia de producto y crecimiento temprano."),
+            CreateEvent("Taller de Convivencia y Buen Trato Comunitario", EventType.Taller, 2, 40, 45000m, FutureSchedule(nowBogota, 10, 17), "Espacio participativo para fortalecer comunicacion, mediacion y acuerdos de convivencia."),
+            CreateEvent("Cuarteto de Nos - Historias Improbables", EventType.Concierto, 2, 45, 220000m, FutureSchedule(nowBogota, 18, 20), "Presentacion especial de Cuarteto de Nos en formato de auditorio para seguidores de la banda."),
 
-            CreateEvent("Festival Altavoz Medellin", EventType.Concierto, 3, 450, 180000m, PastSchedule(nowBogota, 14, 19), "Festival musical con bandas nacionales, invitados y experiencia gastronomica."),
-            CreateEvent("Congreso Colombia Sostenible", EventType.Conferencia, 3, 300, 120000m, CurrentSchedule(nowBogota), "Congreso empresarial sobre sostenibilidad, energia y ciudades inteligentes."),
-            CreateEvent("Bootcamp de Marketing Cultural", EventType.Taller, 3, 220, 85000m, FutureSchedule(nowBogota, 9, 18), "Entrenamiento intensivo para promocionar proyectos culturales con datos."),
+            CreateEvent("Gustavo Cerati Sinfonico", EventType.Concierto, 3, 420, 220000m, PastSchedule(nowBogota, 28, 20), "Homenaje sinfonico al repertorio de Gustavo Cerati con banda invitada y visuales inmersivos."),
+            CreateEvent("Colombia Sostenible: Empresas y Territorio", EventType.Conferencia, 3, 300, 120000m, PastSchedule(nowBogota, 20, 18), "Foro empresarial sobre energia, ciudades sostenibles, biodiversidad y desarrollo regional."),
+            CreateEvent("Bootcamp de Datos para Decisiones Publicas", EventType.Taller, 3, 240, 85000m, CurrentSchedule(nowBogota), "Entrenamiento practico en analisis de datos, tableros e indicadores para equipos publicos."),
+            CreateEvent("Conciencia en Ciberseguridad para Familias", EventType.Conferencia, 3, 260, 65000m, FutureSchedule(nowBogota, 1, 19), "Charla abierta sobre fraudes digitales, privacidad, contrasenas y cuidado de menores en linea."),
+            CreateEvent("Taller de Emprendimiento Creativo", EventType.Taller, 3, 220, 85000m, FutureSchedule(nowBogota, 12, 18), "Laboratorio para validar propuestas culturales, calcular costos y preparar lanzamientos."),
+            CreateEvent("Enjambre - Tercera Fecha", EventType.Concierto, 3, 430, 220000m, FutureSchedule(nowBogota, 21, 20), "Tercera fecha de Enjambre con montaje de gran formato y zona gastronomica colombiana."),
         };
 
         foreach (var @event in events)
@@ -68,25 +151,35 @@ public static class DemoDataSeeder
         await db.Events.AddRangeAsync(events, ct);
 
         var codeSequence = 100001;
+        var buyerIndex = 0;
         var reservations = new List<Reservation>();
 
-        AddPastStory(reservations, events[0], nowBogota, ref codeSequence, 150, 10, 8);
-        AddPastStory(reservations, events[3], nowBogota, ref codeSequence, 40, 2, 3);
-        AddPastStory(reservations, events[6], nowBogota, ref codeSequence, 410, 10, 15);
+        AddPastStory(reservations, events[0], ref buyerIndex, ref codeSequence, 22, 18, 6, 5);
+        AddPastStory(reservations, events[1], ref buyerIndex, ref codeSequence, 14, 11, 4, 3);
+        AddCurrentStory(reservations, events[2], nowBogota, ref buyerIndex, ref codeSequence, 38, 12, 7, 5);
+        AddNearFutureStory(reservations, events[3], nowBogota, ref buyerIndex, ref codeSequence, 28, 10, 6, 4);
+        AddFutureStory(reservations, events[4], nowBogota, ref buyerIndex, ref codeSequence, 18, 14, 8, 4);
+        AddFutureStory(reservations, events[5], nowBogota, ref buyerIndex, ref codeSequence, 42, 35, 16, 6);
 
-        AddCurrentStory(reservations, events[1], nowBogota, ref codeSequence, 70, 20, 5);
-        AddCurrentStory(reservations, events[4], nowBogota, ref codeSequence, 20, 10, 3);
-        AddCurrentStory(reservations, events[7], nowBogota, ref codeSequence, 160, 50, 12);
+        AddPastStory(reservations, events[6], ref buyerIndex, ref codeSequence, 8, 7, 3, 2);
+        AddPastStory(reservations, events[7], ref buyerIndex, ref codeSequence, 6, 5, 2, 2);
+        AddCurrentStory(reservations, events[8], nowBogota, ref buyerIndex, ref codeSequence, 10, 5, 3, 2);
+        AddNearFutureStory(reservations, events[9], nowBogota, ref buyerIndex, ref codeSequence, 9, 6, 3, 2);
+        AddFutureStory(reservations, events[10], nowBogota, ref buyerIndex, ref codeSequence, 7, 6, 4, 2);
+        AddFutureStory(reservations, events[11], nowBogota, ref buyerIndex, ref codeSequence, 10, 8, 4, 2);
 
-        AddFutureStory(reservations, events[2], nowBogota, ref codeSequence, 45, 18, 4);
-        AddFutureStory(reservations, events[5], nowBogota, ref codeSequence, 12, 8, 2);
-        AddFutureStory(reservations, events[8], nowBogota, ref codeSequence, 65, 25, 6);
+        AddPastStory(reservations, events[12], ref buyerIndex, ref codeSequence, 95, 80, 22, 14);
+        AddPastStory(reservations, events[13], ref buyerIndex, ref codeSequence, 48, 42, 12, 10);
+        AddCurrentStory(reservations, events[14], nowBogota, ref buyerIndex, ref codeSequence, 55, 35, 16, 10);
+        AddNearFutureStory(reservations, events[15], nowBogota, ref buyerIndex, ref codeSequence, 44, 26, 12, 8);
+        AddFutureStory(reservations, events[16], nowBogota, ref buyerIndex, ref codeSequence, 36, 30, 18, 8);
+        AddFutureStory(reservations, events[17], nowBogota, ref buyerIndex, ref codeSequence, 80, 65, 28, 12);
 
         await db.Reservations.AddRangeAsync(reservations, ct);
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation(
-            "Seeded demo data with {EventCount} events and {ReservationCount} reservations.",
+            "Seeded Colombian platform data with {EventCount} events and {ReservationCount} reservations.",
             events.Length,
             reservations.Count);
     }
@@ -99,7 +192,7 @@ public static class DemoDataSeeder
         decimal price,
         EventSchedule schedule,
         string description) =>
-        new($"{DemoTitlePrefix}{title}", type, venueId, maxCapacity, new Money(price), schedule, description);
+        new(title, type, venueId, maxCapacity, new Money(price), schedule, description);
 
     private static EventSchedule PastSchedule(DateTimeOffset nowBogota, int daysAgo, int hour) =>
         ScheduleAt(nowBogota.Date.AddDays(-daysAgo), hour, 0, TimeSpan.FromHours(3), nowBogota.Offset);
@@ -136,88 +229,114 @@ public static class DemoDataSeeder
     private static void AddPastStory(
         List<Reservation> reservations,
         Event @event,
-        DateTimeOffset nowBogota,
+        ref int buyerIndex,
         ref int codeSequence,
-        int confirmedTickets,
+        int firstConfirmedTickets,
+        int secondConfirmedTickets,
         int lostTickets,
         int canceledTickets)
     {
-        reservations.Add(Confirmed(@event, "Laura Gomez", "laura.gomez@example.com", confirmedTickets, @event.Schedule.StartsAt.AddDays(-18), ref codeSequence));
-        reservations.Add(Lost(@event, "Carlos Ramirez", "carlos.ramirez@example.com", lostTickets, @event.Schedule.StartsAt.AddDays(-12), @event.Schedule.StartsAt.AddHours(-6), ref codeSequence));
-        reservations.Add(CanceledConfirmed(@event, "Natalia Torres", "natalia.torres@example.com", canceledTickets, @event.Schedule.StartsAt.AddDays(-10), @event.Schedule.StartsAt.AddDays(-4), ref codeSequence));
+        reservations.Add(Confirmed(@event, NextBuyer(ref buyerIndex), firstConfirmedTickets, @event.Schedule.StartsAt.AddDays(-18), ref codeSequence));
+        reservations.Add(Confirmed(@event, NextBuyer(ref buyerIndex), secondConfirmedTickets, @event.Schedule.StartsAt.AddDays(-14), ref codeSequence));
+        reservations.Add(Lost(@event, NextBuyer(ref buyerIndex), lostTickets, @event.Schedule.StartsAt.AddDays(-10), @event.Schedule.StartsAt.AddHours(-6), ref codeSequence));
+        reservations.Add(CanceledConfirmed(@event, NextBuyer(ref buyerIndex), canceledTickets, @event.Schedule.StartsAt.AddDays(-9), @event.Schedule.StartsAt.AddDays(-4), ref codeSequence));
     }
 
     private static void AddCurrentStory(
         List<Reservation> reservations,
         Event @event,
         DateTimeOffset nowBogota,
+        ref int buyerIndex,
         ref int codeSequence,
         int confirmedTickets,
         int pendingTickets,
-        int lostTickets)
+        int lostTickets,
+        int canceledTickets)
     {
-        reservations.Add(Confirmed(@event, "Andres Mejia", "andres.mejia@example.com", confirmedTickets, nowBogota.AddDays(-5), ref codeSequence));
-        reservations.Add(Pending(@event, "Valentina Rojas", "valentina.rojas@example.com", pendingTickets, nowBogota.AddMinutes(-5)));
-        reservations.Add(Lost(@event, "Miguel Herrera", "miguel.herrera@example.com", lostTickets, nowBogota.AddDays(-2), @event.Schedule.StartsAt.AddHours(-8), ref codeSequence));
+        reservations.Add(Confirmed(@event, NextBuyer(ref buyerIndex), confirmedTickets, nowBogota.AddDays(-4), ref codeSequence));
+        reservations.Add(Pending(@event, NextBuyer(ref buyerIndex), pendingTickets, nowBogota.AddMinutes(-5)));
+        reservations.Add(Lost(@event, NextBuyer(ref buyerIndex), lostTickets, nowBogota.AddDays(-2), @event.Schedule.StartsAt.AddHours(-8), ref codeSequence));
+        reservations.Add(CanceledConfirmed(@event, NextBuyer(ref buyerIndex), canceledTickets, nowBogota.AddDays(-3), nowBogota.AddDays(-2), ref codeSequence));
+    }
+
+    private static void AddNearFutureStory(
+        List<Reservation> reservations,
+        Event @event,
+        DateTimeOffset nowBogota,
+        ref int buyerIndex,
+        ref int codeSequence,
+        int confirmedTickets,
+        int pendingTickets,
+        int lostTickets,
+        int canceledTickets)
+    {
+        reservations.Add(Confirmed(@event, NextBuyer(ref buyerIndex), confirmedTickets, nowBogota.AddDays(-3), ref codeSequence));
+        reservations.Add(Pending(@event, NextBuyer(ref buyerIndex), pendingTickets, nowBogota.AddMinutes(-4)));
+        reservations.Add(Lost(@event, NextBuyer(ref buyerIndex), lostTickets, nowBogota.AddDays(-2), nowBogota.AddHours(-2), ref codeSequence));
+        reservations.Add(CanceledConfirmed(@event, NextBuyer(ref buyerIndex), canceledTickets, nowBogota.AddDays(-4), nowBogota.AddDays(-3), ref codeSequence));
     }
 
     private static void AddFutureStory(
         List<Reservation> reservations,
         Event @event,
         DateTimeOffset nowBogota,
+        ref int buyerIndex,
         ref int codeSequence,
-        int confirmedTickets,
+        int firstConfirmedTickets,
+        int secondConfirmedTickets,
         int pendingTickets,
         int canceledTickets)
     {
-        reservations.Add(Confirmed(@event, "Paula Castro", "paula.castro@example.com", confirmedTickets, nowBogota.AddDays(-2), ref codeSequence));
-        reservations.Add(Pending(@event, "Santiago Ruiz", "santiago.ruiz@example.com", pendingTickets, nowBogota.AddMinutes(-4)));
-        reservations.Add(CanceledConfirmed(@event, "Diana Moreno", "diana.moreno@example.com", canceledTickets, nowBogota.AddDays(-3), nowBogota.AddDays(-1), ref codeSequence));
+        reservations.Add(Confirmed(@event, NextBuyer(ref buyerIndex), firstConfirmedTickets, nowBogota.AddDays(-5), ref codeSequence));
+        reservations.Add(Confirmed(@event, NextBuyer(ref buyerIndex), secondConfirmedTickets, nowBogota.AddDays(-3), ref codeSequence));
+        reservations.Add(Pending(@event, NextBuyer(ref buyerIndex), pendingTickets, nowBogota.AddMinutes(-4)));
+        reservations.Add(CanceledConfirmed(@event, NextBuyer(ref buyerIndex), canceledTickets, nowBogota.AddDays(-4), nowBogota.AddDays(-2), ref codeSequence));
     }
 
-    private static Reservation Pending(Event @event, string name, string email, int quantity, DateTimeOffset createdAt) =>
-        new(@event.Id, new Buyer(name, email), quantity, createdAt);
+    private static Reservation Pending(Event @event, SeedBuyer buyer, int quantity, DateTimeOffset createdAt) =>
+        new(@event.Id, new Buyer(buyer.Name, buyer.Email), quantity, createdAt);
 
     private static Reservation Confirmed(
         Event @event,
-        string name,
-        string email,
+        SeedBuyer buyer,
         int quantity,
         DateTimeOffset createdAt,
         ref int codeSequence)
     {
-        var reservation = Pending(@event, name, email, quantity, createdAt);
+        var reservation = Pending(@event, buyer, quantity, createdAt);
         reservation.Confirm(NextCode(ref codeSequence), createdAt.AddMinutes(5));
         return reservation;
     }
 
     private static Reservation Lost(
         Event @event,
-        string name,
-        string email,
+        SeedBuyer buyer,
         int quantity,
         DateTimeOffset createdAt,
         DateTimeOffset canceledAt,
         ref int codeSequence)
     {
-        var reservation = Confirmed(@event, name, email, quantity, createdAt, ref codeSequence);
+        var reservation = Confirmed(@event, buyer, quantity, createdAt, ref codeSequence);
         reservation.CancelConfirmed(releaseSeats: false, canceledAt);
         return reservation;
     }
 
     private static Reservation CanceledConfirmed(
         Event @event,
-        string name,
-        string email,
+        SeedBuyer buyer,
         int quantity,
         DateTimeOffset createdAt,
         DateTimeOffset canceledAt,
         ref int codeSequence)
     {
-        var reservation = Confirmed(@event, name, email, quantity, createdAt, ref codeSequence);
+        var reservation = Confirmed(@event, buyer, quantity, createdAt, ref codeSequence);
         reservation.CancelConfirmed(releaseSeats: true, canceledAt);
         return reservation;
     }
 
+    private static SeedBuyer NextBuyer(ref int buyerIndex) => Buyers[buyerIndex++ % Buyers.Length];
+
     private static string NextCode(ref int codeSequence) => $"EV-{codeSequence++:D6}";
+
+    private sealed record SeedBuyer(string Name, string Email);
 }

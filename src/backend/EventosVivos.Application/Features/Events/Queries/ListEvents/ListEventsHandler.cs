@@ -2,10 +2,12 @@ using EventosVivos.Domain;
 using EventosVivos.Domain.Enums;
 using EventosVivos.Domain.Policies;
 using EventosVivos.Domain.Repositories;
+using EventosVivos.Domain.Rules;
 using EventosVivos.Domain.Services;
 using EventosVivos.Application.DTOs;
+using MediatR;
 
-namespace EventosVivos.Application.Handlers;
+namespace EventosVivos.Application.Features.Events.Queries.ListEvents;
 
 /// <summary>
 /// Query to list events with optional filters, derived status, and pagination.
@@ -17,7 +19,7 @@ namespace EventosVivos.Application.Handlers;
 /// <param name="Status">Filter by derived status (activo, completado, cancelado).</param>
 /// <param name="TitleSearch">Search by title (partial match).</param>
 /// <param name="PageNumber">Page number (1-based, default 1).</param>
-/// <param name="PageSize">Items per page (1-50, default 10).</param>
+/// <param name="PageSize">Items per page (1-100, default 10).</param>
 public record ListEventsQuery(
     string? Type = null,
     DateTimeOffset? StartsAtFrom = null,
@@ -25,8 +27,8 @@ public record ListEventsQuery(
     int? VenueId = null,
     string? Status = null,
     string? TitleSearch = null,
-    int PageNumber = 1,
-    int PageSize = 10);
+    int PageNumber = PaginationRules.DefaultPageNumber,
+    int PageSize = PaginationRules.DefaultPageSize) : IRequest<Result<PagedResult<EventResponse>>>;
 
 /// <summary>
 /// Handles event listing: queries via repository filters, derives public status,
@@ -34,7 +36,7 @@ public record ListEventsQuery(
 /// Status derivation is done in memory because it depends on the current clock,
 /// so pagination happens after status filtering for correctness.
 /// </summary>
-public class ListEventsHandler
+public class ListEventsHandler : IRequestHandler<ListEventsQuery, Result<PagedResult<EventResponse>>>
 {
     private readonly IEventRepository _eventRepository;
     private readonly IClock _clock;
@@ -45,14 +47,14 @@ public class ListEventsHandler
         _clock = clock;
     }
 
-    public async Task<Result<PagedResult<EventResponse>>> HandleAsync(
+    public async Task<Result<PagedResult<EventResponse>>> Handle(
         ListEventsQuery query, CancellationToken ct = default)
     {
         // Validate pagination parameters
         if (query.PageNumber < 1)
             return Result<PagedResult<EventResponse>>.Failure("PageNumber must be 1 or greater.", ErrorType.Validation);
-        if (query.PageSize < 1 || query.PageSize > 50)
-            return Result<PagedResult<EventResponse>>.Failure("PageSize must be between 1 and 50.", ErrorType.Validation);
+        if (query.PageSize < 1 || query.PageSize > PaginationRules.MaxPageSize)
+            return Result<PagedResult<EventResponse>>.Failure("PageSize must be between 1 and 100.", ErrorType.Validation);
 
         // Parse type filter
         EventType? parsedType = null;
@@ -73,51 +75,34 @@ public class ListEventsHandler
             parsedStatus = s;
         }
 
-        // Fetch from repository with structural filters (non-status filters applied at DB level)
-        var events = await _eventRepository.GetFilteredAsync(
+        var page = await _eventRepository.GetFilteredPageAsync(
             type: parsedType,
             venueId: query.VenueId,
             startsAtFrom: query.StartsAtFrom,
             startsAtTo: query.StartsAtTo,
-            isCanceled: null, // we derive status, so include all
+            status: parsedStatus,
+            now: _clock.UtcNow,
             titleSearch: query.TitleSearch,
+            pageNumber: query.PageNumber,
+            pageSize: query.PageSize,
             ct: ct);
 
-        // Derive public status and filter by status if requested (in-memory)
-        var filtered = events
-            .Select(e => new
-            {
-                Event = e,
-                PublicStatus = EventStatusPolicy.GetPublicStatus(e, _clock)
-            })
-            .Where(x => !parsedStatus.HasValue || x.PublicStatus == parsedStatus.Value)
-            .ToList();
-
-        // Stable ordering: StartsAt asc, Title asc
-        filtered = filtered
-            .OrderBy(x => x.Event.Schedule.StartsAt)
-            .ThenBy(x => x.Event.Title, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        // Paginate
-        var totalCount = filtered.Count;
+        var totalCount = page.TotalCount;
         var totalPages = (int)Math.Ceiling(totalCount / (double)query.PageSize);
         if (totalPages == 0) totalPages = 1;
 
-        var pagedItems = filtered
-            .Skip((query.PageNumber - 1) * query.PageSize)
-            .Take(query.PageSize)
-            .Select(x => new EventResponse(
-                x.Event.Id,
-                x.Event.Title,
-                x.Event.Description,
-                EventTypeApiMapper.ToApiString(x.Event.Type),
-                x.Event.VenueId,
-                EventStatusApiMapper.ToApiString(x.PublicStatus),
-                x.Event.Schedule.StartsAt,
-                x.Event.Schedule.EndsAt,
-                x.Event.Price.Amount,
-                x.Event.MaxCapacity))
+        var pagedItems = page.Items
+            .Select(e => new EventResponse(
+                e.Id,
+                e.Title,
+                e.Description,
+                EventTypeApiMapper.ToApiString(e.Type),
+                e.VenueId,
+                EventStatusApiMapper.ToApiString(EventStatusPolicy.GetPublicStatus(e, _clock)),
+                e.Schedule.StartsAt,
+                e.Schedule.EndsAt,
+                e.Price.Amount,
+                e.MaxCapacity))
             .ToList()
             .AsReadOnly();
 

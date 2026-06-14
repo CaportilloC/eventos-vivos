@@ -21,10 +21,12 @@ public class ReservationRepository : IReservationRepository
     public async Task<IReadOnlyList<Reservation>> GetByEventIdAsync(Guid eventId, CancellationToken ct = default) =>
         await _db.Reservations.AsNoTracking().Where(r => r.EventId == eventId).ToListAsync(ct);
 
-    public async Task<IReadOnlyList<Reservation>> GetFilteredAsync(
-        Guid? eventId = null,
-        string? status = null,
-        string? buyerEmail = null,
+    public async Task<PagedQueryResult<Reservation>> GetFilteredPageAsync(
+        Guid? eventId,
+        ReservationStatus? status,
+        string? buyerEmail,
+        int pageNumber,
+        int pageSize,
         CancellationToken ct = default)
     {
         var query = _db.Reservations.AsNoTracking().AsQueryable();
@@ -32,18 +34,20 @@ public class ReservationRepository : IReservationRepository
         if (eventId.HasValue)
             query = query.Where(r => r.EventId == eventId.Value);
 
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            var normalized = StatusStringParser.NormalizeToPascalCase(status);
-            if (normalized is not null &&
-                Enum.TryParse<ReservationStatus>(normalized, ignoreCase: true, out var parsedStatus))
-                query = query.Where(r => r.Status == parsedStatus);
-        }
+        if (status.HasValue)
+            query = query.Where(r => r.Status == status.Value);
 
         if (!string.IsNullOrWhiteSpace(buyerEmail))
             query = query.Where(r => EF.Functions.Like(r.Buyer.Email, $"%{buyerEmail}%"));
 
-        return await query.ToListAsync(ct);
+        var totalCount = await query.CountAsync(ct);
+        var items = await query
+            .OrderByDescending(r => r.CreatedAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return new PagedQueryResult<Reservation>(items, totalCount);
     }
 
     public async Task<bool> CodeExistsAsync(string code, CancellationToken ct = default) =>

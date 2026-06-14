@@ -7,8 +7,11 @@ using EventosVivos.Domain.Services;
 using EventosVivos.Domain.ValueObjects;
 using EventosVivos.Application.DTOs;
 using EventosVivos.Application.Abstractions;
+using MediatR;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
-namespace EventosVivos.Application.Handlers;
+namespace EventosVivos.Application.Features.Reservations.Commands.UpdateReservation;
 
 /// <summary>
 /// Request to update a pending reservation's quantity and buyer info.
@@ -22,33 +25,36 @@ public record UpdateReservationRequest(
     Guid ReservationId,
     int Quantity,
     string BuyerName,
-    string BuyerEmail);
+    string BuyerEmail) : IRequest<Result<ReservationResponse>>;
 
 /// <summary>
 /// Handles reservation updates: validates the reservation is still pending,
 /// re-runs availability policy excluding the current reservation's held seats,
 /// and persists changes to buyer/quantity.
 /// </summary>
-public class UpdateReservationHandler
+public class UpdateReservationHandler : IRequestHandler<UpdateReservationRequest, Result<ReservationResponse>>
 {
     private readonly IReservationRepository _reservationRepository;
     private readonly IEventRepository _eventRepository;
     private readonly IClock _clock;
     private readonly ITransactionRunner _transactionRunner;
+    private readonly ILogger<UpdateReservationHandler> _logger;
 
     public UpdateReservationHandler(
         IReservationRepository reservationRepository,
         IEventRepository eventRepository,
         IClock clock,
-        ITransactionRunner? transactionRunner = null)
+        ITransactionRunner? transactionRunner = null,
+        ILogger<UpdateReservationHandler>? logger = null)
     {
         _reservationRepository = reservationRepository;
         _eventRepository = eventRepository;
         _clock = clock;
         _transactionRunner = transactionRunner ?? new NoopTransactionRunner();
+        _logger = logger ?? NullLogger<UpdateReservationHandler>.Instance;
     }
 
-    public async Task<Result<ReservationResponse>> HandleAsync(
+    public async Task<Result<ReservationResponse>> Handle(
         UpdateReservationRequest request, CancellationToken ct = default)
     {
         return await _transactionRunner.RunSerializableAsync(async transactionCt =>
@@ -99,6 +105,11 @@ public class UpdateReservationHandler
 
             reservation.Update(buyer, request.Quantity, now);
             await _reservationRepository.UpdateAsync(reservation, transactionCt);
+            _logger.LogInformation(
+                "Reservation updated {ReservationId} for event {EventId} with quantity {Quantity}",
+                reservation.Id,
+                reservation.EventId,
+                reservation.Quantity);
 
             return Result<ReservationResponse>.Success(ReservationResponseMapper.FromReservation(reservation));
         }, ct);

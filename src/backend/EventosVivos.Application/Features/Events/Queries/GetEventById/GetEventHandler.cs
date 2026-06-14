@@ -3,19 +3,20 @@ using EventosVivos.Domain.Policies;
 using EventosVivos.Domain.Repositories;
 using EventosVivos.Domain.Services;
 using EventosVivos.Application.DTOs;
+using MediatR;
 
-namespace EventosVivos.Application.Handlers;
+namespace EventosVivos.Application.Features.Events.Queries.GetEventById;
 
 /// <summary>
 /// Query to get a single event by ID.
 /// </summary>
 /// <param name="EventId">Identifier of the event to retrieve.</param>
-public record GetEventQuery(Guid EventId);
+public record GetEventQuery(Guid EventId) : IRequest<Result<EventResponse>>;
 
 /// <summary>
 /// Handles fetching a single event by ID with derived public status.
 /// </summary>
-public class GetEventHandler
+public class GetEventHandler : IRequestHandler<GetEventQuery, Result<EventResponse>>
 {
     private readonly IEventRepository _eventRepository;
     private readonly IClock _clock;
@@ -26,7 +27,7 @@ public class GetEventHandler
         _clock = clock;
     }
 
-    public async Task<Result<EventResponse>> HandleAsync(
+    public async Task<Result<EventResponse>> Handle(
         GetEventQuery query, CancellationToken ct = default)
     {
         var @event = await _eventRepository.GetByIdAsync(query.EventId, ct);

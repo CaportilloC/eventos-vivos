@@ -4,7 +4,9 @@ using EventosVivos.Infrastructure.Data;
 using EventosVivos.Infrastructure.Data.Seed;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,6 +15,25 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Controllers + FluentValidation auto-validation
 builder.Services.AddControllers();
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var problem = new ValidationProblemDetails(context.ModelState)
+        {
+            Status = StatusCodes.Status400BadRequest,
+            Title = "Bad Request",
+            Detail = "One or more validation errors occurred.",
+            Type = "https://httpstatuses.com/400",
+            Instance = context.HttpContext.Request.Path
+        };
+
+        problem.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
+        problem.Extensions["errorCode"] = "Validation";
+
+        return new BadRequestObjectResult(problem);
+    };
+});
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<ApplicationAssembly>();
@@ -26,11 +47,7 @@ builder.Services.AddSwaggerGen(options =>
         Title = "EventosVivos API",
         Version = "v1",
         Description = "Professional REST API for EventosVivos event management, reservation lifecycle, and occupancy reporting. Built as part of the Ceiba Software Fullstack .NET + Angular technical assessment.",
-        Contact = new OpenApiContact
-        {
-            Name = "Christian Alexander Portillo (Chris.Port)",
-            Email = "wesker980@gmail.com"
-        }
+        Contact = new OpenApiContact { Name = "EventosVivos Technical Assessment" }
     });
 
     // Enable [SwaggerOperation] attributes for custom operationId/summary
@@ -73,18 +90,73 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Swagger UI in all environments (useful for development and test)
-app.UseSwagger();
-app.UseSwaggerUI(options =>
+app.UseExceptionHandler(errorApp =>
 {
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "EventosVivos API v1");
-    options.RoutePrefix = "swagger";
+    errorApp.Run(async context =>
+    {
+        var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+        var logger = context.RequestServices
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("GlobalExceptionHandler");
+
+        logger.LogError(exception, "Unhandled exception while processing {Method} {Path}",
+            context.Request.Method,
+            context.Request.Path);
+
+        var problem = new ProblemDetails
+        {
+            Status = StatusCodes.Status500InternalServerError,
+            Title = "Internal Server Error",
+            Detail = "An unexpected error occurred while processing the request.",
+            Type = "https://httpstatuses.com/500",
+            Instance = context.Request.Path
+        };
+
+        problem.Extensions["traceId"] = context.TraceIdentifier;
+        problem.Extensions["errorCode"] = "UnexpectedError";
+
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/problem+json";
+        await context.Response.WriteAsJsonAsync(problem);
+    });
 });
+
+var swaggerEnabled = app.Environment.IsDevelopment()
+    || app.Configuration.GetValue("Swagger:Enabled", false);
+
+if (swaggerEnabled)
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "EventosVivos API v1");
+        options.RoutePrefix = "swagger";
+    });
+}
 
 app.UseCors("AngularDev");
 
-// Redirect root to Swagger for convenience (excluded from OpenAPI spec)
-app.MapGet("/", () => Results.Redirect("/swagger"))
+// Redirect root to Swagger for local/demo convenience when Swagger is enabled.
+app.MapGet("/", () => swaggerEnabled
+        ? Results.Redirect("/swagger")
+        : Results.Ok(new { name = "EventosVivos API", status = "Healthy" }))
+   .ExcludeFromDescription();
+
+app.MapGet("/health/live", () => Results.Ok(new { status = "Healthy" }))
+   .ExcludeFromDescription();
+
+app.MapGet("/health/ready", async (EventosVivosDbContext db, HttpContext httpContext, CancellationToken ct) =>
+    await db.Database.CanConnectAsync(ct)
+        ? Results.Ok(new { status = "Healthy" })
+        : Results.Problem(
+            statusCode: StatusCodes.Status503ServiceUnavailable,
+            title: "Service Unavailable",
+            detail: "Database connection is not available.",
+            extensions: new Dictionary<string, object?>
+            {
+                ["traceId"] = httpContext.TraceIdentifier,
+                ["errorCode"] = "DatabaseUnavailable"
+            }))
    .ExcludeFromDescription();
 
 app.MapControllers();

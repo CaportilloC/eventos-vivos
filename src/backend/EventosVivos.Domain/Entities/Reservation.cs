@@ -1,4 +1,5 @@
 using EventosVivos.Domain.Enums;
+using EventosVivos.Domain.Rules;
 using EventosVivos.Domain.ValueObjects;
 
 namespace EventosVivos.Domain.Entities;
@@ -29,7 +30,7 @@ public class Reservation
         Quantity = quantity;
         Status = ReservationStatus.PendientePago;
         CreatedAt = now;
-        ExpiresAt = now.AddMinutes(15);
+        ExpiresAt = now.AddMinutes(ReservationRules.PendingExpirationMinutes);
     }
 
     public bool IsExpired(DateTimeOffset now) =>
