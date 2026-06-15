@@ -93,7 +93,7 @@ import { ErrorStateComponent } from '../../../../shared/components/error-state/e
               </div>
               <div class="info-item">
                 <span class="info-label">Precio</span>
-                <span class="info-value price">{{ evt.price | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                <span class="info-value price">{{ evt.price | currency:'USD':'symbol':'1.2-2' }}</span>
               </div>
             </div>
           </mat-card-content>

@@ -171,7 +171,7 @@ import { toColombiaDateTimeOffset } from '../../../../shared/utils/date-time-uti
                     <td><span class="type-badge">{{ event.type }}</span></td>
                     <td class="cell-muted">{{ event.startsAt | date:'dd/MM/yyyy' }}</td>
                     <td class="cell-muted">{{ event.startsAt | date:'HH:mm' }}</td>
-                    <td class="cell-price">{{ event.price | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
+                    <td class="cell-price">{{ event.price | currency:'USD':'symbol':'1.2-2' }}</td>
                     <td class="cell-muted">{{ event.maxCapacity }}</td>
                     <td><app-status-chip [status]="event.status" /></td>
                     <td class="cell-actions">

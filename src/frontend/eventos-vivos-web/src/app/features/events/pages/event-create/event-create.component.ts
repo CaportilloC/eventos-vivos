@@ -274,7 +274,7 @@ const DD_MM_YYYY_FORMATS: MatDateFormats = {
                 }
 
                 <mat-form-field appearance="outline">
-                  <mat-label>Precio ($)</mat-label>
+                  <mat-label>Precio (USD)</mat-label>
                   <input matInput type="number" formControlName="price" min="0" step="0.01" />
                   @if (eventForm.get('price')?.hasError('required')) {
                     <mat-error>Indique el precio</mat-error>
@@ -336,10 +336,11 @@ export class EventCreateComponent {
   protected readonly submitting = toSignal(this.eventsFacade.submitting$, { initialValue: false });
   protected readonly error = toSignal(this.eventsFacade.submitError$, { initialValue: null });
   protected readonly timeOptions = generateTimeOptions();
-  protected readonly eventCreateBadges = ['Venue', 'Fechas', 'Capacidad', 'Validación backend'];
+  protected readonly eventCreateBadges = ['Venue', 'Fechas', 'Capacidad', 'USD', 'Validación backend'];
   protected readonly eventCreateGuide = [
     'Seleccioná un lugar disponible y respetá su capacidad máxima.',
     'Verificá fecha y hora de inicio y fin antes de registrar el evento.',
+    'La moneda base del proyecto es USD; ingresá el precio del ticket en dólares.',
     'No se permiten eventos activos solapados en el mismo lugar.',
     'Las reglas finales se validan nuevamente en el backend al guardar.',
   ];

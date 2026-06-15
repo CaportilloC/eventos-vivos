@@ -28,6 +28,14 @@ La decisión fue intencional y responde a criterio arquitectónico, no a una lim
 - Encapsulamiento de reglas de negocio.
 - Testabilidad y mantenibilidad.
 
+### Decisión técnica: moneda base
+
+La moneda base del proyecto es **USD**.
+
+Esta decisión mantiene la regla RN-05 del enunciado como una comparación literal: los eventos con precio mayor a **USD 100** limitan la reserva a máximo 10 entradas por transacción.
+
+El sistema almacena importes como valores decimales simples y no implementa conversión multi-moneda. COP y otras monedas quedan fuera de alcance para evitar complejidad innecesaria en una prueba técnica centrada en reservas, capacidad y reglas de negocio.
+
 ### CQRS ligero
 
 Las operaciones de escritura se modelan como **Commands** y las operaciones de lectura como **Queries**, usando MediatR para desacoplar controladores y casos de uso.
@@ -297,7 +305,9 @@ DemoData__SeedOnStartup: "true"
 DemoData__ResetBeforeSeed: "true"
 ```
 
-La carga demo incluye eventos, reservas y estados representativos para validar los flujos principales del sistema.
+La carga demo incluye eventos, reservas y estados representativos para validar los flujos principales del sistema. Los precios demo están expresados en USD y preservan ambos lados de RN-05: eventos de hasta USD 100 y eventos mayores a USD 100.
+
+Si una base local ya tiene datos sembrados con valores anteriores, usá `DemoData__ResetBeforeSeed=true` o reiniciá el volumen de SQL Server para regenerar los importes demo en USD. El reset borra eventos y reservas demo, pero mantiene los venues de referencia.
 
 ## Comandos útiles
 

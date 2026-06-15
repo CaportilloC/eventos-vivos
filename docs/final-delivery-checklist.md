@@ -17,7 +17,7 @@
 - [x] RN-02 No solapamiento de eventos activos por venue.
 - [x] RN-03 Weekend no inicia después de las 22:00.
 - [x] RN-04 No reservar si el evento inicia en menos de 1 hora.
-- [x] RN-05 Precio mayor a COP 100.000 limita a 10 entradas por transacción.
+- [x] RN-05 Precio mayor a USD 100 limita a 10 entradas por transacción.
 - [x] RN-06 Estado `completado` cuando la fecha actual supera la hora de fin.
 - [x] RN-07 Cancelación confirmada con menos de 48h queda `perdida`.
 
@@ -27,9 +27,9 @@
 - [x] Docker local habilita demo seed en Development.
 - [x] Se preservan venues.
 - [x] Se limpian eventos/reservas de tests.
-- [x] 9 eventos demo: 3 por venue, 3 por tipo, pasado/presente/futuro.
-- [x] 27 reservas demo con todos los estados.
-- [x] Precios en COP.
+- [x] 18 eventos demo: 6 por venue, mezcla de tipos y estados pasado/presente/futuro.
+- [x] 72 reservas demo con todos los estados.
+- [x] Precios en USD.
 - [x] Usuarios ficticios realistas con `example.com`.
 
 ## Validación ejecutada
