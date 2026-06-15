@@ -1,12 +1,95 @@
-# Eventos Vivos
+# 🎟️ Eventos Vivos
 
-Sistema de gestión de eventos y reservas construido como prueba técnica Full Stack con ASP.NET Core Web API, Angular, SQL Server, Docker y despliegue preparado sobre Azure.
+Sistema Full Stack para gestionar eventos, reservas, pagos y reportes operativos, construido como prueba técnica con **ASP.NET Core Web API**, **Angular**, **SQL Server**, **Docker** y despliegue productivo en **Azure Container Apps**.
 
-## Arquitectura Elegida y Justificación
+> ✅ Solución desplegada, documentada, dockerizada y con CI/CD automatizado mediante GitHub Actions + Azure OIDC.
+
+![.NET](https://img.shields.io/badge/.NET-10-512BD4?style=for-the-badge&logo=dotnet)
+![Angular](https://img.shields.io/badge/Angular-22-DD0031?style=for-the-badge&logo=angular)
+![SQL Server](https://img.shields.io/badge/SQL%20Server-2022-CC2927?style=for-the-badge&logo=microsoftsqlserver)
+![Azure](https://img.shields.io/badge/Azure-Container%20Apps-0078D4?style=for-the-badge&logo=microsoftazure)
+![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)
+
+## 👤 Autor
+
+| Dato | Información |
+|---|---|
+| **Nombre** | Christian Alexander Portillo |
+| **Email** | [Wesker980@gmail.com](mailto:Wesker980@gmail.com) |
+| **LinkedIn** | [www.linkedin.com/in/christian-alexander-portillo](https://www.linkedin.com/in/christian-alexander-portillo) |
+
+## 📌 Índice
+
+- [🚀 Demo en producción](#demo-produccion)
+- [🎯 Objetivo del proyecto](#objetivo)
+- [✨ Funcionalidad cubierta](#funcionalidad)
+- [🧱 Arquitectura elegida y justificación](#arquitectura)
+- [🛠️ Tecnologías utilizadas](#tecnologias)
+- [▶️ Ejecución local](#ejecucion-local)
+- [🐳 Docker](#docker)
+- [☁️ Infraestructura Azure](#infraestructura-azure)
+- [🔄 CI/CD](#cicd)
+- [📊 Demo data](#demo-data)
+- [🧪 Comandos útiles de validación](#validacion)
+
+<a id="demo-produccion"></a>
+
+## 🚀 Demo en producción
+
+| Recurso | URL |
+|---|---|
+| **Aplicación web** | [Frontend productivo](https://frontend.redocean-9bd5eff0.eastus.azurecontainerapps.io/dashboard) |
+| **Swagger API** | [Swagger productivo](https://api.redocean-9bd5eff0.eastus.azurecontainerapps.io/swagger/index.html) |
+| **API Health** | [Health ready](https://api.redocean-9bd5eff0.eastus.azurecontainerapps.io/health/ready) |
+| **API base** | <https://api.redocean-9bd5eff0.eastus.azurecontainerapps.io/api/v1> |
+
+> 🔐 El despliegue productivo se realiza desde `main` mediante GitHub Actions, Azure OIDC, Azure Container Registry y Azure Container Apps.
+
+<a id="objetivo"></a>
+
+## 🎯 Objetivo del proyecto
+
+Eventos Vivos permite administrar eventos y reservas aplicando reglas de negocio reales sobre capacidad, disponibilidad, ventanas de tiempo, pagos pendientes y reportes de ocupación.
+
+La solución busca demostrar:
+
+- Diseño backend mantenible con separación de responsabilidades.
+- Frontend SPA profesional y responsive.
+- Reglas de negocio centralizadas en backend.
+- Persistencia relacional con SQL Server.
+- Contenedores listos para ejecución local y cloud.
+- CI/CD completo con despliegue automatizado en Azure.
+
+<a id="funcionalidad"></a>
+
+## ✨ Funcionalidad cubierta
+
+- 🎫 Gestión de eventos.
+- 🧾 Gestión de reservas pendientes.
+- 💳 Confirmación de pago con código `EV-######`.
+- 🚫 Cancelación de reservas con regla de penalización de 48 horas.
+- 📈 Reporte de ocupación por evento.
+- 🔎 Filtros y paginación en eventos, reservas y catálogos.
+- 📚 Swagger/OpenAPI documentado.
+- 🧭 Guías operativas dentro de los flujos principales.
+- 📱 Interfaz responsive para desktop, tablet y mobile.
+
+<a id="arquitectura"></a>
+
+## 🧱 Arquitectura elegida y justificación
 
 La solución fue diseñada como un **Modular Monolith** basado en principios de **Clean Architecture** y **Onion Architecture**.
 
-Aunque existen alternativas como microservicios, arquitecturas distribuidas, Event Sourcing o CQRS avanzado, para el alcance de esta prueba técnica se eligió un monolito modular porque ofrece mejor equilibrio entre simplicidad, mantenibilidad, testabilidad y preparación para evolución futura.
+> ✅ Decisión técnica: usar un monolito modular permite mantener simplicidad operativa, alta testabilidad y separación clara de responsabilidades sin introducir complejidad distribuida innecesaria.
+
+Aunque existen alternativas como microservicios, arquitecturas distribuidas, Event Sourcing o CQRS avanzado, para el alcance de esta prueba técnica se eligió un monolito modular porque ofrece mejor equilibrio entre:
+
+- Simplicidad de despliegue.
+- Mantenibilidad.
+- Testabilidad.
+- Evolución futura.
+- Bajo costo operativo.
 
 La decisión fue intencional y responde a criterio arquitectónico, no a una limitación técnica.
 
@@ -14,10 +97,10 @@ La decisión fue intencional y responde a criterio arquitectónico, no a una lim
 
 | Capa | Responsabilidad |
 |---|---|
-| Domain | Entidades, Value Objects, enumeraciones, policies y reglas de negocio. No depende de infraestructura ni frameworks externos. |
-| Application | Casos de uso, Commands, Queries, Handlers, validaciones, DTOs y contratos. Implementa CQRS ligero mediante MediatR. |
-| Infrastructure | Entity Framework Core, SQL Server, repositorios, migraciones y servicios técnicos. Implementa contratos requeridos por Application. |
-| API | ASP.NET Core Web API. Expone endpoints RESTful y mantiene controladores delgados delegando casos de uso a MediatR. |
+| **Domain** | Entidades, Value Objects, enumeraciones, policies y reglas de negocio. No depende de infraestructura ni frameworks externos. |
+| **Application** | Casos de uso, Commands, Queries, Handlers, validaciones, DTOs y contratos. Implementa CQRS ligero mediante MediatR. |
+| **Infrastructure** | Entity Framework Core, SQL Server, repositorios, migraciones y servicios técnicos. Implementa contratos requeridos por Application. |
+| **API** | ASP.NET Core Web API. Expone endpoints RESTful y mantiene controladores delgados delegando casos de uso a MediatR. |
 
 ### Principios aplicados
 
@@ -28,6 +111,12 @@ La decisión fue intencional y responde a criterio arquitectónico, no a una lim
 - Encapsulamiento de reglas de negocio.
 - Testabilidad y mantenibilidad.
 
+### CQRS ligero
+
+Las operaciones de escritura se modelan como **Commands** y las operaciones de lectura como **Queries**, usando **MediatR** para desacoplar controladores y casos de uso.
+
+No se implementó CQRS avanzado ni Event Sourcing porque esas alternativas habrían agregado complejidad innecesaria para el dominio planteado.
+
 ### Decisión técnica: moneda base
 
 La moneda base del proyecto es **USD**.
@@ -36,15 +125,26 @@ Esta decisión mantiene la regla RN-05 del enunciado como una comparación liter
 
 El sistema almacena importes como valores decimales simples y no implementa conversión multi-moneda. COP y otras monedas quedan fuera de alcance para evitar complejidad innecesaria en una prueba técnica centrada en reservas, capacidad y reglas de negocio.
 
-### CQRS ligero
+<a id="tecnologias"></a>
 
-Las operaciones de escritura se modelan como **Commands** y las operaciones de lectura como **Queries**, usando MediatR para desacoplar controladores y casos de uso.
+## 🛠️ Tecnologías utilizadas
 
-No se implementó CQRS avanzado ni Event Sourcing porque esas alternativas habrían agregado complejidad innecesaria para el dominio planteado.
+| Área | Tecnologías |
+|---|---|
+| **Backend** | .NET 10, ASP.NET Core Web API, MediatR, FluentValidation, Swashbuckle / Swagger |
+| **Frontend** | Angular 22, Angular Material, Bootstrap 5.3, TypeScript 6, RxJS, SweetAlert2 |
+| **Base de datos** | SQL Server 2022, Entity Framework Core 10, EF Core Migrations |
+| **Testing** | xUnit, Microsoft.AspNetCore.Mvc.Testing, Vitest, Angular unit testing, coverlet.collector |
+| **Infraestructura local** | Docker, Docker Compose, Nginx, SQL Server container, ASP.NET Core container |
+| **Cloud** | Azure Container Registry, Azure Container Apps, Azure SQL Database, Log Analytics |
+| **CI/CD** | GitHub Actions, Azure OIDC, Docker build/push, Azure Container Apps deployment |
+| **Herramientas** | Git, GitHub, Azure CLI, Docker CLI, npm, Angular CLI, .NET CLI |
 
-## Requisitos Previos
+<a id="ejecucion-local"></a>
 
-Versiones identificadas en el proyecto y entorno de validación:
+## ▶️ Ejecución local
+
+### Requisitos previos
 
 | Requisito | Versión / uso |
 |---|---|
@@ -55,13 +155,10 @@ Versiones identificadas en el proyecto y entorno de validación:
 | Docker | 29.5.3 |
 | Docker Compose | v5.1.4 |
 | SQL Server local | `mcr.microsoft.com/mssql/server:2022-latest` |
-| Base de datos cloud | Azure SQL Database Basic |
 
-> Para ejecución local completa se recomienda Docker, porque levanta SQL Server, API y frontend con la misma configuración usada para validar la plataforma.
+> 💡 Para ejecución local completa se recomienda Docker, porque levanta SQL Server, API y frontend con una configuración cercana a la plataforma validada.
 
-## Instrucciones para ejecutar localmente
-
-### Opción A — Docker recomendada
+### Opción A — Docker recomendado
 
 1. Clonar el repositorio:
 
@@ -88,7 +185,7 @@ MSSQL_SA_PASSWORD=ChangeMe_StrongPassword123!
 docker compose --env-file .env -f docker/docker-compose.yml up -d --build
 ```
 
-5. URLs locales disponibles:
+5. Abrir servicios locales:
 
 | Servicio | URL |
 |---|---|
@@ -116,19 +213,12 @@ La ejecución manual requiere tener disponible una instancia de SQL Server. La f
 
 #### Base de datos
 
-1. Crear `.env` si no existe:
-
 ```bash
 cp .env.example .env
-```
-
-2. Levantar SQL Server:
-
-```bash
 docker compose --env-file .env -f docker/docker-compose.yml up -d sqlserver
 ```
 
-3. Cadena de conexión local esperada:
+Cadena de conexión local esperada:
 
 ```text
 Server=localhost,1433;Database=EventosVivosDb;User Id=sa;Password=<MSSQL_SA_PASSWORD>;TrustServerCertificate=True;Encrypt=False
@@ -136,15 +226,9 @@ Server=localhost,1433;Database=EventosVivosDb;User Id=sa;Password=<MSSQL_SA_PASS
 
 #### Backend
 
-1. Restaurar paquetes:
-
 ```bash
 dotnet restore src/backend/EventosVivos.Api/EventosVivos.Api.csproj
-```
 
-2. Ejecutar la API en modo Development usando SQL Server local:
-
-```bash
 ConnectionStrings__EventosVivosDb="Server=localhost,1433;Database=EventosVivosDb;User Id=sa;Password=<MSSQL_SA_PASSWORD>;TrustServerCertificate=True;Encrypt=False" \
 ASPNETCORE_ENVIRONMENT=Development \
 DemoData__SeedOnStartup=true \
@@ -156,20 +240,13 @@ En `Development`, la API aplica migraciones automáticamente al iniciar y puede 
 
 #### Frontend
 
-1. Instalar dependencias:
-
 ```bash
 cd src/frontend/eventos-vivos-web
 npm install
-```
-
-2. Ejecutar Angular:
-
-```bash
 npm start
 ```
 
-3. URL local:
+URL local:
 
 ```text
 http://localhost:4200
@@ -182,20 +259,9 @@ El frontend en modo desarrollo usa `proxy.conf.json`:
 /swagger -> http://localhost:5000
 ```
 
-## Tecnologías Utilizadas
+<a id="docker"></a>
 
-| Área | Tecnologías |
-|---|---|
-| Backend | .NET 10, ASP.NET Core Web API, MediatR, FluentValidation, Swashbuckle / Swagger |
-| Frontend | Angular 22, Angular Material, Bootstrap 5.3, TypeScript 6, RxJS, SweetAlert2 |
-| Base de Datos | SQL Server 2022, Entity Framework Core 10, EF Core Migrations |
-| Testing | xUnit, Microsoft.AspNetCore.Mvc.Testing, Vitest, Angular unit testing, coverlet.collector |
-| Infraestructura | Docker, Docker Compose, Nginx, SQL Server container, ASP.NET Core container |
-| Cloud | Azure Container Registry, Azure Container Apps, Azure SQL Database, Log Analytics |
-| CI/CD | GitHub Actions, Azure OIDC, Docker build/push, Azure Container Apps deployment |
-| Herramientas de Desarrollo | Git, GitHub, Azure CLI, Docker CLI, npm, Angular CLI, .NET CLI |
-
-## Docker
+## 🐳 Docker
 
 La plataforma incluye tres servicios en `docker/docker-compose.yml`:
 
@@ -219,9 +285,13 @@ flowchart LR
     Api --> Sql[(SQL Server 2022\nlocalhost:1433)]
 ```
 
-## Despliegue
+<a id="infraestructura-azure"></a>
 
-La solución fue preparada y validada para despliegue en Azure usando contenedores.
+## ☁️ Infraestructura Azure
+
+La solución fue preparada y validada para despliegue en Azure usando contenedores, base de datos administrada y observabilidad básica.
+
+![Diagrama de infraestructura de Eventos Vivos](docs/assets/diagrama-infraestructura.png)
 
 ### Recursos Azure utilizados
 
@@ -236,23 +306,7 @@ La solución fue preparada y validada para despliegue en Azure usando contenedor
 | Azure SQL Database | `EventosVivosDb` |
 | Log Analytics | `law-eventos-vivos` |
 
-### URLs desplegadas
-
-| Servicio | URL |
-|---|---|
-| Frontend | <https://frontend.redocean-9bd5eff0.eastus.azurecontainerapps.io> |
-| API | <https://api.redocean-9bd5eff0.eastus.azurecontainerapps.io> |
-| Swagger vía frontend | <https://frontend.redocean-9bd5eff0.eastus.azurecontainerapps.io/swagger> |
-| Swagger directo API | <https://api.redocean-9bd5eff0.eastus.azurecontainerapps.io/swagger> |
-
-### Imágenes desplegadas
-
-| Aplicación | Imagen |
-|---|---|
-| Backend | `eventosvivosacr.azurecr.io/eventosvivos-api:azure-20260614-2328` |
-| Frontend | `eventosvivosacr.azurecr.io/eventosvivos-frontend:azure-20260614-2326` |
-
-### Estrategia
+### Estrategia de despliegue
 
 1. Compilar imágenes Docker de backend y frontend.
 2. Publicar imágenes en Azure Container Registry.
@@ -260,14 +314,16 @@ La solución fue preparada y validada para despliegue en Azure usando contenedor
 4. Conectar backend a Azure SQL Database mediante cadena de conexión segura.
 5. Exponer frontend públicamente y mantener el consumo de API mediante proxy `/api`.
 
-## CI/CD
+<a id="cicd"></a>
+
+## 🔄 CI/CD
 
 El repositorio implementa automatización con **GitHub Actions**.
 
 | Workflow | Archivo | Propósito |
 |---|---|---|
-| CI | `.github/workflows/ci.yml` | Ejecuta build y tests de backend/frontend, más validación de Docker build. |
-| Deploy Azure | `.github/workflows/deploy-azure.yml` | Construye imágenes Docker, las publica en ACR y actualiza Azure Container Apps. |
+| **CI** | `.github/workflows/ci.yml` | Ejecuta build y tests de backend/frontend, más validación de Docker build. |
+| **Deploy Azure** | `.github/workflows/deploy-azure.yml` | Construye imágenes Docker, las publica en ACR y actualiza Azure Container Apps. |
 
 ### CI
 
@@ -280,7 +336,7 @@ El workflow de CI corre en pull requests hacia `main` y valida:
 
 ### Deploy Azure
 
-El despliegue utiliza autenticación OIDC entre GitHub Actions y Azure, evitando credenciales largas dentro del repositorio.
+El despliegue utiliza autenticación **OIDC** entre GitHub Actions y Azure, evitando credenciales largas dentro del repositorio.
 
 El workflow de despliegue:
 
@@ -294,9 +350,11 @@ El workflow de despliegue:
 8. Actualiza la Container App `frontend`.
 9. Ejecuta smoke tests contra API, frontend, proxy `/api` y Swagger.
 
-El deploy puede ejecutarse manualmente con `workflow_dispatch` y también queda preparado para ejecutarse automáticamente al integrar cambios en `main`.
+> 🚀 Al mergear un Pull Request hacia `main`, GitHub Actions ejecuta CI y luego despliega automáticamente producción en Azure.
 
-## Demo data
+<a id="demo-data"></a>
+
+## 📊 Demo data
 
 En Docker local, la API corre en `Development` y tiene habilitado el seeder demo:
 
@@ -305,13 +363,15 @@ DemoData__SeedOnStartup: "true"
 DemoData__ResetBeforeSeed: "true"
 ```
 
-La carga demo incluye eventos, reservas y estados representativos para validar los flujos principales del sistema. Los precios demo están expresados en USD y preservan ambos lados de RN-05: eventos de hasta USD 100 y eventos mayores a USD 100.
+La carga demo incluye eventos, reservas y estados representativos para validar los flujos principales del sistema. Los precios demo están expresados en **USD** y preservan ambos lados de RN-05: eventos de hasta USD 100 y eventos mayores a USD 100.
 
 Si una base local ya tiene datos sembrados con valores anteriores, usá `DemoData__ResetBeforeSeed=true` o reiniciá el volumen de SQL Server para regenerar los importes demo en USD. El reset borra eventos y reservas demo, pero mantiene los venues de referencia.
 
-## Comandos útiles
+<a id="validacion"></a>
 
-### Validación frontend
+## 🧪 Comandos útiles de validación
+
+### Frontend
 
 ```bash
 cd src/frontend/eventos-vivos-web
@@ -319,7 +379,7 @@ npm run build
 npm test -- --watch=false
 ```
 
-### Validación backend
+### Backend
 
 ```bash
 dotnet test tests/backend/EventosVivos.Tests/EventosVivos.Tests.csproj --nologo
@@ -333,19 +393,13 @@ curl http://localhost:5000/api/v1/events?pageNumber=1\&pageSize=20
 curl http://localhost:5000/api/v1/reservations?pageNumber=1\&pageSize=50
 ```
 
-### API desplegada
+### API productiva
 
 ```bash
 curl https://api.redocean-9bd5eff0.eastus.azurecontainerapps.io/health/ready
 curl https://frontend.redocean-9bd5eff0.eastus.azurecontainerapps.io/api/v1/events?pageNumber=1\&pageSize=20
 ```
 
-## Funcionalidad cubierta
+---
 
-- Gestión de eventos.
-- Gestión de reservas pendientes.
-- Confirmación de pago con código `EV-######`.
-- Cancelación de reservas con regla de penalización de 48 horas.
-- Reporte de ocupación por evento.
-- Filtros y paginación en eventos, reservas y catálogos.
-- Swagger/OpenAPI documentado.
+Construido con foco en claridad arquitectónica, experiencia de usuario y despliegue reproducible. 🚀
