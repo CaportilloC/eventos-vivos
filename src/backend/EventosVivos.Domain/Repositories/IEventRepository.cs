@@ -7,6 +7,7 @@ public interface IEventRepository
 {
     Task<Event?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<IReadOnlyList<Event>> GetByVenueIdAsync(int venueId, CancellationToken ct = default);
+    Task<IReadOnlyList<Event>> GetActiveForReservationAsync(DateTimeOffset reservationCutoff, CancellationToken ct = default);
     Task<PagedQueryResult<Event>> GetFilteredPageAsync(
         EventType? type,
         int? venueId,

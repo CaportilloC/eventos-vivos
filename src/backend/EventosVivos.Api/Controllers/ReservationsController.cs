@@ -6,6 +6,7 @@ using EventosVivos.Application.Features.Reservations.Commands.ConfirmPayment;
 using EventosVivos.Application.Features.Reservations.Commands.CreateReservation;
 using EventosVivos.Application.Features.Reservations.Commands.UpdateReservation;
 using EventosVivos.Application.Features.Reservations.Queries.GetReservationById;
+using EventosVivos.Application.Features.Reservations.Queries.ListAvailableReservationEvents;
 using EventosVivos.Application.Features.Reservations.Queries.ListReservations;
 using MediatR;
 
@@ -25,6 +26,22 @@ public class ReservationsController : ControllerBase
     private readonly ISender _sender;
 
     public ReservationsController(ISender sender) => _sender = sender;
+
+    /// <summary>List active events available for reservations.</summary>
+    [HttpGet("available-events")]
+    [SwaggerOperation(
+        OperationId = "Reservations_ListAvailableEvents",
+        Summary = "List events available for reservation",
+        Description = "Returns active events that can still receive reservations, including held and available ticket counts.")]
+    [ProducesResponseType(typeof(IReadOnlyList<AvailableReservationEventResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListAvailableEvents(CancellationToken ct)
+    {
+        var result = await _sender.Send(new ListAvailableReservationEventsQuery(), ct);
+        if (result.IsFailure)
+            return this.ToProblem(result);
+
+        return Ok(result.Data);
+    }
 
     /// <summary>Create a pending reservation.</summary>
     /// <remarks>

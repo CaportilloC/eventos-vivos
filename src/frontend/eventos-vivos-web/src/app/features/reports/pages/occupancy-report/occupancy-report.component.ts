@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
@@ -6,6 +6,7 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ReportsFacade } from '../../store/reports.facade';
@@ -13,6 +14,7 @@ import { StatusChipComponent } from '../../../../shared/components/status-chip/s
 import { LoadingStateComponent } from '../../../../shared/components/loading-state/loading-state.component';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
+import { OperationalGuideComponent } from '../../../../shared/components/operational-guide/operational-guide.component';
 
 @Component({
   selector: 'app-occupancy-report',
@@ -26,12 +28,14 @@ import { ErrorStateComponent } from '../../../../shared/components/error-state/e
     MatCardModule,
     MatFormFieldModule,
     MatSelectModule,
+    MatInputModule,
     MatButtonModule,
     MatIconModule,
     StatusChipComponent,
     LoadingStateComponent,
     EmptyStateComponent,
     ErrorStateComponent,
+    OperationalGuideComponent,
   ],
   template: `
     <div class="page-container">
@@ -62,14 +66,33 @@ import { ErrorStateComponent } from '../../../../shared/components/error-state/e
         </div>
       </div>
 
+      <app-operational-guide
+        title="Guía de lectura del reporte"
+        description="Usá este reporte para entender ocupación, ingresos y disponibilidad por evento."
+        icon="monitoring"
+        [items]="reportGuide"
+        [badges]="reportBadges"
+      />
+
       <!-- Event selector card -->
       <mat-card class="selector-card" appearance="outlined">
         <mat-card-content>
           <div class="selector-row">
+            <mat-form-field appearance="outline" class="event-search">
+              <mat-label>Buscar evento</mat-label>
+              <mat-icon matPrefix>search</mat-icon>
+              <input
+                matInput
+                type="search"
+                placeholder="Nombre del evento..."
+                [value]="eventSearch()"
+                (input)="eventSearch.set($any($event.target).value)"
+              />
+            </mat-form-field>
             <mat-form-field appearance="outline" class="event-selector">
               <mat-label>Seleccionar evento</mat-label>
               <mat-select [formControl]="eventControl">
-                @for (evt of events(); track evt.id) {
+                @for (evt of filteredEvents(); track evt.id) {
                   <mat-option [value]="evt.id">
                     {{ evt.title }} — {{ evt.startsAt | date:'dd/MM/yyyy' }}
                   </mat-option>
@@ -217,10 +240,16 @@ import { ErrorStateComponent } from '../../../../shared/components/error-state/e
       display: flex;
       align-items: center;
       gap: 16px;
+      flex-wrap: wrap;
     }
 
     .event-selector {
       flex: 1;
+      min-width: 280px;
+    }
+
+    .event-search {
+      flex: 0 1 320px;
     }
 
     .metrics-grid {
@@ -320,6 +349,10 @@ import { ErrorStateComponent } from '../../../../shared/components/error-state/e
       .event-selector {
         width: 100%;
       }
+      .event-search {
+        width: 100%;
+        flex-basis: auto;
+      }
       .metrics-grid {
         grid-template-columns: 1fr;
       }
@@ -337,8 +370,22 @@ export class OccupancyReportComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
   private readonly reportsFacade = inject(ReportsFacade);
+  protected readonly reportBadges = ['Ocupación', 'Ingresos', 'Disponibilidad', 'Estado'];
+  protected readonly reportGuide = [
+    'Seleccioná un evento para consultar sus métricas consolidadas.',
+    'La ocupación se calcula sobre la capacidad máxima del evento.',
+    'Los boletos perdidos reflejan cancelaciones o reservas penalizadas.',
+    'Los ingresos consideran reservas confirmadas según las reglas del backend.',
+  ];
 
   protected readonly events = toSignal(this.reportsFacade.events$, { initialValue: [] });
+  protected readonly eventSearch = signal('');
+  protected readonly filteredEvents = computed(() => {
+    const term = this.eventSearch().trim().toLowerCase();
+    if (!term) return this.events();
+
+    return this.events().filter((evt) => `${evt.title} ${evt.startsAt}`.toLowerCase().includes(term));
+  });
   protected readonly report = toSignal(this.reportsFacade.report$, { initialValue: null });
   protected readonly loading = toSignal(this.reportsFacade.loading$, { initialValue: false });
   protected readonly error = toSignal(this.reportsFacade.error$, { initialValue: null });

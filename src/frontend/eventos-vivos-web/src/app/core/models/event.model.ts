@@ -11,6 +11,17 @@ export interface EventResponse {
   maxCapacity: number;
 }
 
+export interface AvailableReservationEventResponse {
+  id: string;
+  title: string;
+  startsAt: string;
+  price: number;
+  maxCapacity: number;
+  occupiedTickets: number;
+  availableTickets: number;
+  status: EventStatus;
+}
+
 export type EventStatus = 'activo' | 'cancelado' | 'completado';
 
 export interface CreateEventRequest {

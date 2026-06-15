@@ -17,6 +17,7 @@ import { EventsFacade } from '../../store/events.facade';
 import { CatalogsFacade } from '../../../catalogs/store/catalogs.facade';
 import { LoadingStateComponent } from '../../../../shared/components/loading-state/loading-state.component';
 import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
+import { OperationalGuideComponent } from '../../../../shared/components/operational-guide/operational-guide.component';
 import {
   generateTimeOptions,
   toColombiaDateTimeOffset,
@@ -57,6 +58,7 @@ const DD_MM_YYYY_FORMATS: MatDateFormats = {
     MatProgressSpinner,
     LoadingStateComponent,
     ErrorStateComponent,
+    OperationalGuideComponent,
   ],
   template: `
     <div class="page-container">
@@ -86,6 +88,14 @@ const DD_MM_YYYY_FORMATS: MatDateFormats = {
       }
 
       @if (event(); as evt) {
+        <app-operational-guide
+          title="Guía operativa para edición"
+          description="Los cambios de fecha, lugar, capacidad o estado pueden afectar la operación del evento."
+          icon="edit_calendar"
+          [items]="eventEditGuide"
+          [badges]="eventEditBadges"
+        />
+
         <mat-card class="ev-form-card ev-form-card--wide" appearance="outlined">
           <mat-card-content>
             <form [formGroup]="eventForm" (ngSubmit)="onSubmit()" class="ev-form">
@@ -351,6 +361,13 @@ export class EventEditComponent implements OnInit {
   protected readonly error = toSignal(this.eventsFacade.error$, { initialValue: null });
   protected readonly submitError = toSignal(this.eventsFacade.submitError$, { initialValue: null });
   protected readonly timeOptions = generateTimeOptions();
+  protected readonly eventEditBadges = ['Estado operativo', 'Reservas', 'Capacidad', 'Fechas'];
+  protected readonly eventEditGuide = [
+    'Confirmá que el evento siga siendo coherente con las reservas existentes.',
+    'Cambiar lugar o capacidad puede afectar la disponibilidad operativa.',
+    'Las fechas se conservan con zona horaria Colombia para evitar cambios inesperados.',
+    'El backend vuelve a validar reglas de solapamiento y capacidad al actualizar.',
+  ];
 
   private eventId = '';
 

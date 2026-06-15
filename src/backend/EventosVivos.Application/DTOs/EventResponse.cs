@@ -27,3 +27,16 @@ public record EventResponse(
     DateTimeOffset EndsAt,
     decimal Price,
     int MaxCapacity);
+
+/// <summary>
+/// Minimal event representation used by reservation forms.
+/// </summary>
+public record AvailableReservationEventResponse(
+    Guid Id,
+    string Title,
+    DateTimeOffset StartsAt,
+    decimal Price,
+    int MaxCapacity,
+    int OccupiedTickets,
+    int AvailableTickets,
+    string Status);

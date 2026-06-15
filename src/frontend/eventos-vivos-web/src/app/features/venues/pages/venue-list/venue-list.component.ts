@@ -12,6 +12,7 @@ import { PagedResult } from '../../../../core/models/paged-result.model';
 import { LoadingStateComponent } from '../../../../shared/components/loading-state/loading-state.component';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
+import { OperationalGuideComponent } from '../../../../shared/components/operational-guide/operational-guide.component';
 
 @Component({
   selector: 'app-venue-list',
@@ -27,6 +28,7 @@ import { ErrorStateComponent } from '../../../../shared/components/error-state/e
     LoadingStateComponent,
     EmptyStateComponent,
     ErrorStateComponent,
+    OperationalGuideComponent,
   ],
   template: `
     <div class="page-container">
@@ -54,6 +56,14 @@ import { ErrorStateComponent } from '../../../../shared/components/error-state/e
           </div>
         </div>
       </div>
+
+      <app-operational-guide
+        title="Guía operativa de catálogos"
+        description="Los lugares disponibles condicionan capacidad, disponibilidad y programación de eventos."
+        icon="location_city"
+        [items]="venuesGuide"
+        [badges]="venuesBadges"
+      />
 
       <!-- Admin card with table -->
       <div class="admin-card">
@@ -215,6 +225,13 @@ import { ErrorStateComponent } from '../../../../shared/components/error-state/e
 })
 export class VenueListComponent {
   private readonly venuesApi = inject(VenuesApiService);
+  protected readonly venuesBadges = ['Capacidad', 'Sedes', 'Eventos', 'Operación'];
+  protected readonly venuesGuide = [
+    'La capacidad del lugar define el límite máximo para nuevos eventos.',
+    'Usá la acción Eventos para revisar la programación asociada a una sede.',
+    'Los lugares funcionan como catálogo base para reglas de disponibilidad.',
+    'Mantené nombres y ciudades claros para facilitar reportes y selección.',
+  ];
 
   protected readonly venues = signal<Venue[]>([]);
   protected readonly loading = signal(false);

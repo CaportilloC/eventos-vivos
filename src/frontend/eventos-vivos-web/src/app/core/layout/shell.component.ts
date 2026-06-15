@@ -7,6 +7,7 @@ import { MatIconButton } from '@angular/material/button';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 interface NavItem {
   icon: string;
@@ -362,6 +363,7 @@ export class ShellComponent {
       label: 'Principal',
       items: [
         { icon: 'dashboard', label: 'Dashboard', route: '/dashboard', exact: true },
+        { icon: 'info', label: 'Acerca del Proyecto', route: '/about-project' },
       ],
     },
     {
@@ -381,8 +383,16 @@ export class ShellComponent {
     {
       label: 'Sistema',
       items: [
-        { icon: 'api', label: 'API / Swagger', externalUrl: '/swagger' },
+        { icon: 'api', label: 'API / Swagger', externalUrl: this.buildSwaggerUrl() },
       ],
     },
   ];
+
+  private buildSwaggerUrl(): string {
+    if (environment.apiBaseUrl.startsWith('/')) {
+      return '/swagger';
+    }
+
+    return environment.apiBaseUrl.replace(/\/api\/v1\/?$/, '/swagger');
+  }
 }

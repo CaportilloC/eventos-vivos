@@ -12,6 +12,7 @@ import { NotificationService } from '../../../../core/services/notification.serv
 import { ReservationsApiService } from '../../../../core/api/reservations-api.service';
 import { ReservationResponse } from '../../../../core/models/reservation.model';
 import { StatusChipComponent } from '../../../../shared/components/status-chip/status-chip.component';
+import { OperationalGuideComponent } from '../../../../shared/components/operational-guide/operational-guide.component';
 
 @Component({
   selector: 'app-reservation-cancel',
@@ -26,6 +27,7 @@ import { StatusChipComponent } from '../../../../shared/components/status-chip/s
     MatProgressSpinner,
     DatePipe,
     StatusChipComponent,
+    OperationalGuideComponent,
   ],
   template: `
     <div class="page-container">
@@ -36,6 +38,14 @@ import { StatusChipComponent } from '../../../../shared/components/status-chip/s
           <p class="page-subtitle">Cancela una reserva existente ingresando su ID</p>
         </div>
       </div>
+
+      <app-operational-guide
+        title="Guía operativa para cancelación"
+        description="La cancelación puede afectar el estado final de la reserva según la cercanía del evento."
+        icon="cancel_schedule_send"
+        [items]="cancelGuide"
+        [badges]="cancelBadges"
+      />
 
       <!-- Form card -->
       <mat-card class="ev-form-card ev-form-card--narrow" appearance="outlined">
@@ -169,6 +179,13 @@ export class ReservationCancelComponent {
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly result = signal<ReservationResponse | null>(null);
+  protected readonly cancelBadges = ['Cancelación', '48 horas', 'Penalización', 'Estado final'];
+  protected readonly cancelGuide = [
+    'Ingresá el ID exacto de la reserva que necesitás cancelar.',
+    'Las reservas confirmadas cerca del evento pueden quedar marcadas como pérdida.',
+    'El backend determina el estado final aplicando la regla de 48 horas.',
+    'Esta acción debe ejecutarse solo cuando exista confirmación operativa del usuario.',
+  ];
 
   protected readonly cancelForm = this.fb.group({
     reservationId: ['', Validators.required],

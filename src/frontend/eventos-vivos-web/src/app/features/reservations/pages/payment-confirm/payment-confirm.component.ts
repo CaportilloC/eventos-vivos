@@ -12,6 +12,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { ReservationsApiService } from '../../../../core/api/reservations-api.service';
 import { ReservationResponse } from '../../../../core/models/reservation.model';
 import { StatusChipComponent } from '../../../../shared/components/status-chip/status-chip.component';
+import { OperationalGuideComponent } from '../../../../shared/components/operational-guide/operational-guide.component';
 
 @Component({
   selector: 'app-payment-confirm',
@@ -26,6 +27,7 @@ import { StatusChipComponent } from '../../../../shared/components/status-chip/s
     MatProgressSpinner,
     MatDividerModule,
     StatusChipComponent,
+    OperationalGuideComponent,
   ],
   template: `
     <div class="page-container">
@@ -36,6 +38,14 @@ import { StatusChipComponent } from '../../../../shared/components/status-chip/s
           <p class="page-subtitle">Confirme el pago de una reserva pendiente</p>
         </div>
       </div>
+
+      <app-operational-guide
+        title="Guía operativa para confirmación de pago"
+        description="Confirmá pagos únicamente sobre reservas pendientes y con ID verificado."
+        icon="payments"
+        [items]="paymentGuide"
+        [badges]="paymentBadges"
+      />
 
       <!-- Form card -->
       <mat-card class="ev-form-card ev-form-card--narrow" appearance="outlined">
@@ -177,6 +187,13 @@ export class PaymentConfirmComponent {
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly result = signal<ReservationResponse | null>(null);
+  protected readonly paymentBadges = ['Pago', 'Código', 'Reserva pendiente', 'Estado'];
+  protected readonly paymentGuide = [
+    'Ingresá el ID exacto de una reserva pendiente de pago.',
+    'Al confirmar, el backend actualiza el estado y preserva el código de confirmación.',
+    'Si la reserva expiró o ya fue procesada, el backend rechazará la operación.',
+    'Revisá el resultado final antes de continuar con otra operación.',
+  ];
 
   protected readonly confirmForm = this.fb.group({
     reservationId: ['', Validators.required],

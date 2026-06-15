@@ -17,8 +17,12 @@ RUN npm run build
 # ──────────────────────────────────────────────────────────────
 FROM nginx:alpine AS runtime
 
-# Copy custom nginx config
-COPY docker/frontend/nginx.conf /etc/nginx/conf.d/default.conf
+# Runtime API proxy target. Docker Compose keeps the internal service name;
+# Azure Container Apps overrides this with the deployed API FQDN.
+ENV API_PROXY_BASE_URL=http://api:8080
+
+# Copy custom nginx config as a template so runtime env vars can be resolved.
+COPY docker/frontend/nginx.conf /etc/nginx/templates/default.conf.template
 
 # Copy built assets
 COPY --from=build /build/dist/eventos-vivos-web/browser /usr/share/nginx/html

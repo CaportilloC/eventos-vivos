@@ -401,7 +401,7 @@ export class EventListComponent {
   protected readonly loading = toSignal(this.eventsFacade.loading$, { initialValue: false });
   protected readonly error = toSignal(this.eventsFacade.error$, { initialValue: null });
   protected readonly dateRangeError = signal<string | null>(null);
-  protected readonly filters: EventFilters = {};
+  protected readonly filters: EventFilters = { status: 'activo' };
   protected venueFilterId = 0;
   protected startsAtFromDate = '';
   protected startsAtToDate = '';
@@ -443,7 +443,7 @@ export class EventListComponent {
 
   protected clearFilters(): void {
     this.filters.type = undefined;
-    this.filters.status = undefined;
+    this.filters.status = 'activo';
     this.filters.titleSearch = undefined;
     this.filters.startsAtFrom = undefined;
     this.filters.startsAtTo = undefined;

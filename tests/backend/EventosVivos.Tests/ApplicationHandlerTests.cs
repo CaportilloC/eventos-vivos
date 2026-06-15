@@ -11,6 +11,7 @@ using EventosVivos.Application.Features.Reservations.Commands.ConfirmPayment;
 using EventosVivos.Application.Features.Reservations.Commands.CreateReservation;
 using EventosVivos.Application.Features.Reservations.Commands.UpdateReservation;
 using EventosVivos.Application.Features.Reservations.Queries.GetReservationById;
+using EventosVivos.Application.Features.Reservations.Queries.ListAvailableReservationEvents;
 using EventosVivos.Application.Features.Reservations.Queries.ListReservations;
 using EventosVivos.Domain.Entities;
 using EventosVivos.Domain.Enums;
@@ -34,6 +35,13 @@ public class InMemoryEventRepository : IEventRepository
     public Task<IReadOnlyList<Event>> GetByVenueIdAsync(int venueId, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<Event>>(
             _events.Where(e => e.VenueId == venueId).ToList());
+
+    public Task<IReadOnlyList<Event>> GetActiveForReservationAsync(DateTimeOffset reservationCutoff, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<Event>>(_events
+            .Where(e => !e.IsCanceled && e.Schedule.StartsAt >= reservationCutoff)
+            .OrderByDescending(e => e.Schedule.StartsAt)
+            .ThenBy(e => e.Title)
+            .ToList());
 
     public Task<PagedQueryResult<Event>> GetFilteredPageAsync(
         EventType? type,
@@ -67,7 +75,7 @@ public class InMemoryEventRepository : IEventRepository
         }
 
         var ordered = query
-            .OrderBy(e => e.Schedule.StartsAt)
+            .OrderByDescending(e => e.Schedule.StartsAt)
             .ThenBy(e => e.Title)
             .ToList();
 
@@ -723,9 +731,29 @@ public class ApplicationHandlerTests
         Assert.True(page2.Data.HasPreviousPage);
         Assert.False(page2.Data.HasNextPage);
 
-        // Verify stable ordering by StartsAt: seed event ("Seed Event") comes first, then pagination events
-        Assert.Equal("Seed Event", page1.Data.Items[0].Title);
-        Assert.Equal("Pagination Event 1", page1.Data.Items[1].Title);
+        // Verify stable ordering by StartsAt descending: newest events first.
+        Assert.Equal("Pagination Event 3", page1.Data.Items[0].Title);
+        Assert.Equal("Pagination Event 2", page1.Data.Items[1].Title);
+    }
+
+    [Fact]
+    public async Task ListEvents_DefaultOrdering_ReturnsStartsAtDescending()
+    {
+        var (events, _, venues, clock, _) = HandlerTestSetup.CreateWithSeed();
+        var handler = new CreateEventHandler(events, venues, clock);
+
+        await handler.Handle(new CreateEventRequest(
+            "Later Event", "Valid event description", 3, 50,
+            HandlerTestSetup.FutureDate.AddDays(14), HandlerTestSetup.FutureEnd.AddDays(14),
+            30, "taller"));
+
+        var listHandler = new ListEventsHandler(events, clock);
+        var result = await listHandler.Handle(new ListEventsQuery(PageSize: 10));
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Data);
+        Assert.Equal("Later Event", result.Data.Items[0].Title);
+        Assert.True(result.Data.Items[0].StartsAt >= result.Data.Items[1].StartsAt);
     }
 
     [Fact]
@@ -908,6 +936,43 @@ public class ApplicationHandlerTests
 
         Assert.True(result.IsFailure);
         Assert.Contains("not found", result.Error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ListAvailableReservationEvents_ReturnsActiveEventsWithHeldAndAvailableTickets()
+    {
+        var (events, reservations, _, clock, eventId) = HandlerTestSetup.CreateWithSeed();
+        var reserveHandler = new ReserveTicketsHandler(events, reservations, clock);
+        var confirmHandler = new ConfirmPaymentHandler(reservations, clock);
+
+        var confirmed = await reserveHandler.Handle(
+            new ReserveTicketsRequest(eventId, 5, "Confirmed", "confirmed@test.com"));
+        Assert.True(confirmed.IsSuccess);
+        await confirmHandler.Handle(new ConfirmPaymentRequest(confirmed.Data!.Id));
+
+        var pending = await reserveHandler.Handle(
+            new ReserveTicketsRequest(eventId, 3, "Pending", "pending@test.com"));
+        Assert.True(pending.IsSuccess);
+
+        var lostBuyer = new Buyer("Lost Buyer", "lost@test.com");
+        var lost = new Reservation(eventId, lostBuyer, 2, clock.UtcNow);
+        lost.Confirm("EV-123456", clock.UtcNow);
+        lost.CancelConfirmed(false, HandlerTestSetup.FutureDate.AddHours(-47));
+        await reservations.AddAsync(lost);
+
+        var expiredBuyer = new Buyer("Expired Buyer", "expired@test.com");
+        await reservations.AddAsync(new Reservation(eventId, expiredBuyer, 4, clock.UtcNow.AddMinutes(-16)));
+
+        var handler = new ListAvailableReservationEventsHandler(events, reservations, clock);
+        var result = await handler.Handle(new ListAvailableReservationEventsQuery());
+
+        Assert.True(result.IsSuccess);
+        var lookupEvent = Assert.Single(result.Data!, e => e.Id == eventId);
+        Assert.Equal("Seed Event", lookupEvent.Title);
+        Assert.Equal("activo", lookupEvent.Status);
+        Assert.Equal(100, lookupEvent.MaxCapacity);
+        Assert.Equal(10, lookupEvent.OccupiedTickets);
+        Assert.Equal(90, lookupEvent.AvailableTickets);
     }
 
     // ─── Reservation.CancelPending timestamp fix ──────────────────────────

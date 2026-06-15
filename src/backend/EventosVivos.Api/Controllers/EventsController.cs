@@ -63,7 +63,7 @@ public class EventsController : ControllerBase
     /// <summary>List and filter events with pagination.</summary>
     /// <remarks>
     /// Returns events with optional filters: by type, venue, date range, derived status, or title search.
-    /// Results are paginated with stable ordering (StartsAt asc, Title asc).
+    /// Results are paginated with stable ordering (StartsAt desc, Title asc).
     /// The <c>status</c> filter accepts derived values: <c>activo</c>, <c>completado</c>, <c>cancelado</c>.
     /// </remarks>
     /// <param name="type">Filter by event type (conferencia, taller, concierto).</param>
@@ -80,7 +80,7 @@ public class EventsController : ControllerBase
     [SwaggerOperation(
         OperationId = "Events_List",
         Summary = "List / filter events",
-        Description = "Returns events with optional filters: type, venue, date range, derived status, or title search. Results are paginated with stable ordering (StartsAt asc, Title asc).")]
+        Description = "Returns events with optional filters: type, venue, date range, derived status, or title search. Results are paginated with stable ordering (StartsAt desc, Title asc).")]
     [ProducesResponseType(typeof(PagedResult<EventResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> List(

@@ -9,6 +9,7 @@ import {
   UpdateReservationRequest,
   ReservationFilters,
 } from '../models/reservation.model';
+import { AvailableReservationEventResponse } from '../models/event.model';
 import { PagedResult } from '../models/paged-result.model';
 import { normalizeStatus } from '../../shared/utils/normalize-status.util';
 
@@ -19,6 +20,16 @@ export class ReservationsApiService {
 
   private normalizeReservation(r: ReservationResponse): ReservationResponse {
     return { ...r, status: normalizeStatus(r.status) };
+  }
+
+  private normalizeAvailableEvent(e: AvailableReservationEventResponse): AvailableReservationEventResponse {
+    return { ...e, status: normalizeStatus(e.status) as AvailableReservationEventResponse['status'] };
+  }
+
+  listAvailableEvents(): Observable<AvailableReservationEventResponse[]> {
+    return this.http.get<AvailableReservationEventResponse[]>(`${this.baseUrl}/available-events`).pipe(
+      map((events) => events.map((event) => this.normalizeAvailableEvent(event))),
+    );
   }
 
   reserve(request: ReserveTicketsRequest): Observable<ReservationResponse> {

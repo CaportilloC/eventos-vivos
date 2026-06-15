@@ -3,6 +3,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DatePipe, CurrencyPipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { computed } from '@angular/core';
 import { startWith } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -11,11 +12,11 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
-import { EventResponse } from '../../../../core/models/event.model';
 import { ReservationResponse, ReserveTicketsRequest } from '../../../../core/models/reservation.model';
 import { ReservationsFacade } from '../../store/reservations.facade';
 import { LoadingStateComponent } from '../../../../shared/components/loading-state/loading-state.component';
 import { StatusChipComponent } from '../../../../shared/components/status-chip/status-chip.component';
+import { OperationalGuideComponent } from '../../../../shared/components/operational-guide/operational-guide.component';
 
 @Component({
   selector: 'app-reservation-form',
@@ -34,6 +35,7 @@ import { StatusChipComponent } from '../../../../shared/components/status-chip/s
     CurrencyPipe,
     StatusChipComponent,
     LoadingStateComponent,
+    OperationalGuideComponent,
   ],
   template: `
     <div class="page-container">
@@ -53,6 +55,14 @@ import { StatusChipComponent } from '../../../../shared/components/status-chip/s
       @if (loadingEvents()) {
         <app-loading-state message="Cargando eventos disponibles..." />
       } @else {
+        <app-operational-guide
+          title="Guía operativa para reservas"
+          description="Validá disponibilidad y datos del comprador antes de generar una reserva pendiente de pago."
+          icon="confirmation_number"
+          [items]="reservationCreateGuide"
+          [badges]="reservationCreateBadges"
+        />
+
         <!-- Reservation form card -->
         <mat-card class="ev-form-card" appearance="outlined">
           <mat-card-content>
@@ -61,12 +71,23 @@ import { StatusChipComponent } from '../../../../shared/components/status-chip/s
               <!-- Event selector -->
               <div class="ev-form-section">
                 <h3 class="ev-form-section-title">Selección de evento</h3>
+                <mat-form-field appearance="outline" class="ev-form-field-full event-search-field">
+                  <mat-label>Buscar evento</mat-label>
+                  <mat-icon matPrefix>search</mat-icon>
+                  <input
+                    matInput
+                    type="search"
+                    placeholder="Nombre del evento..."
+                    [value]="eventSearch()"
+                    (input)="eventSearch.set($any($event.target).value)"
+                  />
+                </mat-form-field>
                 <mat-form-field appearance="outline" class="ev-form-field-full">
                   <mat-label>Evento</mat-label>
                   <mat-select formControlName="eventId">
-                    @for (evt of availableEvents(); track evt.id) {
+                    @for (evt of filteredAvailableEvents(); track evt.id) {
                       <mat-option [value]="evt.id">
-                        {{ evt.title }} — {{ evt.startsAt | date:'dd/MM/yyyy' }} — {{ evt.price | currency:'COP' }}
+                        {{ eventOptionLabel(evt) }}
                       </mat-option>
                     }
                   </mat-select>
@@ -74,6 +95,7 @@ import { StatusChipComponent } from '../../../../shared/components/status-chip/s
                     <mat-error>Seleccione un evento</mat-error>
                   }
                 </mat-form-field>
+
               </div>
 
               <!-- Buyer info -->
@@ -124,6 +146,23 @@ import { StatusChipComponent } from '../../../../shared/components/status-chip/s
                   }
                 </mat-form-field>
               </div>
+
+              @if (selectedEvent(); as evt) {
+                <div class="selected-event-summary">
+                  <div>
+                    <span class="summary-label">Vista previa de la reserva</span>
+                    <strong>{{ evt.title }}</strong>
+                  </div>
+                  <div class="summary-grid">
+                    <span><strong>Fecha:</strong> {{ evt.startsAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                    <span><strong>Precio unitario:</strong> {{ evt.price | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                    <span><strong>Ocupación:</strong> {{ occupancyLabel(evt) }}</span>
+                    <span><strong>Disponibles:</strong> {{ evt.availableTickets }}</span>
+                    <span><strong>Cantidad:</strong> {{ quantityValue() }}</span>
+                    <span class="summary-total"><strong>Total a pagar:</strong> {{ totalToPay() | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                  </div>
+                </div>
+              }
 
               @if (error()) {
                 <div class="ev-form-error">
@@ -199,9 +238,17 @@ import { StatusChipComponent } from '../../../../shared/components/status-chip/s
     }
 
     .result-card {
-      max-width: 700px;
+      max-width: 980px;
       margin: 24px auto 0;
       border-radius: var(--ev-radius-md);
+    }
+
+    .ev-form-card {
+      max-width: 980px;
+    }
+
+    .event-search-field {
+      margin-bottom: 10px;
     }
 
     .result-header-icon {
@@ -251,6 +298,39 @@ import { StatusChipComponent } from '../../../../shared/components/status-chip/s
       font-weight: 600;
     }
 
+    .selected-event-summary {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 14px 16px;
+      border: 1px solid rgba(46, 55, 164, 0.12);
+      border-radius: var(--ev-radius-sm);
+      background: var(--ev-surface-page);
+    }
+
+    .summary-label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 8px 16px;
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 13px;
+    }
+
+    .summary-total {
+      color: var(--ev-primary);
+      font-weight: 700;
+    }
+
     @media (max-width: 600px) {
     }
   `,
@@ -268,6 +348,29 @@ export class ReservationFormComponent {
   protected readonly loadingEvents = toSignal(this.reservationsFacade.eventsLoading$, { initialValue: false });
   protected readonly quantityMax = signal<number | null>(null);
   protected readonly quantityMaxMessage = signal<string | null>(null);
+  protected readonly quantityValue = signal(1);
+  protected readonly eventSearch = signal('');
+  protected readonly filteredAvailableEvents = computed(() => {
+    const term = this.eventSearch().trim().toLowerCase();
+    if (!term) return this.availableEvents();
+
+    return this.availableEvents().filter((evt) =>
+      `${evt.title} ${evt.startsAt}`.toLowerCase().includes(term),
+    );
+  });
+  protected readonly totalToPay = computed(() => {
+    const selectedEvent = this.selectedEvent();
+    const quantity = this.quantityValue();
+    return selectedEvent ? selectedEvent.price * quantity : 0;
+  });
+  protected readonly reservationCreateBadges = ['Disponibilidad', 'Pago pendiente', 'Expiración', 'Validación backend'];
+  protected readonly reservationCreateGuide = [
+    'Seleccioná un evento activo y con disponibilidad suficiente.',
+    'Registrá nombre y correo correctos para seguimiento de la reserva.',
+    'Reglas de cantidad: mínimo 1, máximo general 100, menos de 24 h máximo 5, precio mayor a 100 máximo 10.',
+    'No se puede reservar a menos de 1 h del inicio; si aplican varios límites, gana el más estricto.',
+    'La reserva queda pendiente hasta confirmar el pago correspondiente.',
+  ];
 
   protected readonly reservationForm = this.fb.group({
     eventId: ['', Validators.required],
@@ -284,7 +387,18 @@ export class ReservationFormComponent {
       )
       .subscribe((eventId) => this.updateQuantityLimit(eventId));
 
-    this.reservationsFacade.loadEventsLookup({ status: 'activo' });
+    this.reservationForm.controls.quantity.valueChanges
+      .pipe(
+        startWith(this.reservationForm.controls.quantity.value),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((quantity) => this.quantityValue.set(Number(quantity ?? 0)));
+
+    this.reservationsFacade.eventsLookup$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.updateQuantityLimit(this.reservationForm.controls.eventId.value));
+
+    this.reservationsFacade.loadEventsLookup();
 
     const preselectedId = this.route.snapshot.queryParamMap.get('eventId');
     if (preselectedId) {
@@ -292,28 +406,57 @@ export class ReservationFormComponent {
     }
   }
 
+  protected selectedEvent() {
+    const eventId = this.reservationForm.controls.eventId.value;
+    return this.availableEvents().find((evt) => evt.id === eventId) ?? null;
+  }
+
+  protected eventOptionLabel(evt: { title: string; startsAt: string; price: number; occupiedTickets: number; maxCapacity: number }): string {
+    const start = new Date(evt.startsAt).toLocaleString('es-CO', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    const price = new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      maximumFractionDigits: 0,
+    }).format(evt.price);
+
+    return `${evt.title} · ${start} · ${price} · ${this.occupancyLabel(evt)}`;
+  }
+
+  protected occupancyLabel(evt: { occupiedTickets: number; maxCapacity: number }): string {
+    return `${evt.occupiedTickets}/${evt.maxCapacity} ocupados`;
+  }
+
   private updateQuantityLimit(eventId: string | null): void {
     const selectedEvent = this.availableEvents().find((evt) => evt.id === eventId);
-    let max: number | null = null;
-    let message: string | null = null;
+    let max = 100;
+    const limitMessages = ['Máximo general: 100 boletos por reserva.'];
 
     if (selectedEvent) {
       const hoursUntilStart = (new Date(selectedEvent.startsAt).getTime() - Date.now()) / 3_600_000;
 
       if (hoursUntilStart >= 1 && hoursUntilStart < 24) {
-        max = 5;
-        message = 'Este evento inicia en menos de 24 horas: máximo 5 boletos por reserva.';
-      } else if (selectedEvent.price > 100) {
-        max = 10;
-        message = 'Por el precio del evento, máximo 10 boletos por reserva.';
+        max = Math.min(max, 5);
+        limitMessages.push('Menos de 24 horas: máximo 5.');
       }
+      if (selectedEvent.price > 100) {
+        max = Math.min(max, 10);
+        limitMessages.push('Precio mayor a 100: máximo 10.');
+      }
+      max = Math.min(max, selectedEvent.availableTickets);
+      limitMessages.push(`Disponibles: ${selectedEvent.availableTickets}.`);
     }
 
     this.quantityMax.set(max);
-    this.quantityMaxMessage.set(message);
+    this.quantityMaxMessage.set(`Límite aplicado: ${max}. ${limitMessages.join(' ')}`);
 
     const validators = [Validators.required, Validators.min(1)];
-    if (max !== null) validators.push(Validators.max(max));
+    validators.push(Validators.max(max));
 
     this.reservationForm.controls.quantity.setValidators(validators);
     this.reservationForm.controls.quantity.updateValueAndValidity({ emitEvent: false });

@@ -157,6 +157,7 @@ import { DashboardMetricsService } from '../../../core/services/dashboard-metric
           </mat-card-actions>
         </mat-card>
       </div>
+
     </div>
   `,
   styles: `
@@ -299,6 +300,7 @@ import { DashboardMetricsService } from '../../../core/services/dashboard-metric
       .action-buttons {
         flex-direction: column;
       }
+
     }
   `,
 })
@@ -324,4 +326,5 @@ export class DashboardComponent {
       },
     });
   }
+
 }

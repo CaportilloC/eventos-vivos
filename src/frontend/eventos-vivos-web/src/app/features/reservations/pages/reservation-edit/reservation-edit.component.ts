@@ -15,6 +15,7 @@ import { ReservationsFacade } from '../../store/reservations.facade';
 import { EventsFacade } from '../../../events/store/events.facade';
 import { LoadingStateComponent } from '../../../../shared/components/loading-state/loading-state.component';
 import { StatusChipComponent } from '../../../../shared/components/status-chip/status-chip.component';
+import { OperationalGuideComponent } from '../../../../shared/components/operational-guide/operational-guide.component';
 
 @Component({
   selector: 'app-reservation-edit',
@@ -31,6 +32,7 @@ import { StatusChipComponent } from '../../../../shared/components/status-chip/s
     MatProgressSpinner,
     StatusChipComponent,
     LoadingStateComponent,
+    OperationalGuideComponent,
   ],
   template: `
     <div class="page-container">
@@ -82,6 +84,14 @@ import { StatusChipComponent } from '../../../../shared/components/status-chip/s
             </mat-card>
           </div>
         } @else {
+          <app-operational-guide
+            title="Guía operativa para edición de reserva"
+            description="Solo las reservas pendientes pueden ajustarse antes de la confirmación de pago."
+            icon="manage_accounts"
+            [items]="reservationEditGuide"
+            [badges]="reservationEditBadges"
+          />
+
           <mat-card class="ev-form-card" appearance="outlined">
             <mat-card-header>
               <mat-card-title>
@@ -248,6 +258,13 @@ export class ReservationEditComponent {
   protected readonly loadError = toSignal(this.reservationsFacade.error$, { initialValue: null });
   protected readonly submitting = toSignal(this.reservationsFacade.submitting$, { initialValue: false });
   protected readonly error = toSignal(this.reservationsFacade.submitError$, { initialValue: null });
+  protected readonly reservationEditBadges = ['Pendiente de pago', 'Comprador', 'Cantidad', 'Estado'];
+  protected readonly reservationEditGuide = [
+    'Verificá que la reserva permanezca en estado pendiente de pago.',
+    'Actualizá datos del comprador solo cuando sea necesario para la operación.',
+    'Revisá la cantidad solicitada antes de guardar cambios.',
+    'La confirmación de pago se realiza en el flujo correspondiente, no desde esta edición.',
+  ];
 
   protected reservationId = '';
 

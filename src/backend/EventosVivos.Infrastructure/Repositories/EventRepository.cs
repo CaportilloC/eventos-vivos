@@ -21,6 +21,14 @@ public class EventRepository : IEventRepository
     public async Task<IReadOnlyList<Event>> GetByVenueIdAsync(int venueId, CancellationToken ct = default) =>
         await _db.Events.AsNoTracking().Where(e => e.VenueId == venueId).ToListAsync(ct);
 
+    public async Task<IReadOnlyList<Event>> GetActiveForReservationAsync(DateTimeOffset reservationCutoff, CancellationToken ct = default) =>
+        await _db.Events
+            .AsNoTracking()
+            .Where(e => !e.IsCanceled && e.Schedule.StartsAt >= reservationCutoff)
+            .OrderByDescending(e => e.Schedule.StartsAt)
+            .ThenBy(e => e.Title)
+            .ToListAsync(ct);
+
     public async Task<PagedQueryResult<Event>> GetFilteredPageAsync(
         EventType? type,
         int? venueId,
@@ -63,7 +71,7 @@ public class EventRepository : IEventRepository
 
         var totalCount = await query.CountAsync(ct);
         var items = await query
-            .OrderBy(e => e.Schedule.StartsAt)
+            .OrderByDescending(e => e.Schedule.StartsAt)
             .ThenBy(e => e.Title)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)

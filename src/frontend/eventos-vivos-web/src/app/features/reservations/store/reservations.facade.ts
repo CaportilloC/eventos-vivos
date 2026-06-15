@@ -2,9 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
-import { EventsApiService } from '../../../core/api/events-api.service';
 import { ReservationsApiService } from '../../../core/api/reservations-api.service';
-import { EventFilters, EventResponse } from '../../../core/models/event.model';
+import { AvailableReservationEventResponse } from '../../../core/models/event.model';
 import { PagedResult } from '../../../core/models/paged-result.model';
 import { ReservationFilters, ReservationResponse, ReserveTicketsRequest, UpdateReservationRequest } from '../../../core/models/reservation.model';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -13,14 +12,13 @@ import { apiErrorMessage } from '../../../core/utils/api-error-message';
 @Injectable({ providedIn: 'root' })
 export class ReservationsFacade {
   private readonly reservationsApi = inject(ReservationsApiService);
-  private readonly eventsApi = inject(EventsApiService);
   private readonly notification = inject(NotificationService);
   private readonly router = inject(Router);
 
   private readonly reservationsSubject = new BehaviorSubject<ReservationResponse[]>([]);
   private readonly selectedSubject = new BehaviorSubject<ReservationResponse | null>(null);
   private readonly createdSubject = new BehaviorSubject<ReservationResponse | null>(null);
-  private readonly eventsLookupSubject = new BehaviorSubject<EventResponse[]>([]);
+  private readonly eventsLookupSubject = new BehaviorSubject<AvailableReservationEventResponse[]>([]);
   private readonly loadingSubject = new BehaviorSubject(false);
   private readonly selectedLoadingSubject = new BehaviorSubject(false);
   private readonly submittingSubject = new BehaviorSubject(false);
@@ -88,12 +86,12 @@ export class ReservationsFacade {
     });
   }
 
-  loadEventsLookup(filters?: EventFilters): void {
+  loadEventsLookup(): void {
     this.eventsLoadingSubject.next(true);
 
-    this.eventsApi.list(filters, 1, 50).subscribe({
-      next: (result) => {
-        this.eventsLookupSubject.next(result.items);
+    this.reservationsApi.listAvailableEvents().subscribe({
+      next: (events) => {
+        this.eventsLookupSubject.next(events);
         this.eventsLoadingSubject.next(false);
       },
       error: (error: HttpErrorResponse) => {

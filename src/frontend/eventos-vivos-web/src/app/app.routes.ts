@@ -15,6 +15,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'about-project',
+        loadComponent: () =>
+          import('./features/about-project/pages/about-project.component').then(
+            (m) => m.AboutProjectComponent,
+          ),
+      },
+      {
         path: 'events',
         loadChildren: () =>
           import('./features/events/event.routes').then((m) => m.eventRoutes),

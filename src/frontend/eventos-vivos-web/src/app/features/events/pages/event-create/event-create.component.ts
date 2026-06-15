@@ -13,6 +13,7 @@ import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { provideNativeDateAdapter, MAT_DATE_FORMATS, MAT_DATE_LOCALE, MatDateFormats } from '@angular/material/core';
 import { EventsFacade } from '../../store/events.facade';
 import { CatalogsFacade } from '../../../catalogs/store/catalogs.facade';
+import { OperationalGuideComponent } from '../../../../shared/components/operational-guide/operational-guide.component';
 import {
   generateTimeOptions,
   toColombiaDateTimeOffset,
@@ -50,6 +51,7 @@ const DD_MM_YYYY_FORMATS: MatDateFormats = {
     MatButtonModule,
     MatIconModule,
     MatProgressSpinner,
+    OperationalGuideComponent,
   ],
   template: `
     <div class="page-container">
@@ -65,6 +67,14 @@ const DD_MM_YYYY_FORMATS: MatDateFormats = {
           </div>
         </div>
       </div>
+
+      <app-operational-guide
+        title="Guía operativa para eventos"
+        description="Antes de guardar, revisá las reglas que pueden afectar disponibilidad, capacidad y horarios."
+        icon="event_available"
+        [items]="eventCreateGuide"
+        [badges]="eventCreateBadges"
+      />
 
       <!-- Form card -->
       <mat-card class="ev-form-card ev-form-card--wide" appearance="outlined">
@@ -326,6 +336,13 @@ export class EventCreateComponent {
   protected readonly submitting = toSignal(this.eventsFacade.submitting$, { initialValue: false });
   protected readonly error = toSignal(this.eventsFacade.submitError$, { initialValue: null });
   protected readonly timeOptions = generateTimeOptions();
+  protected readonly eventCreateBadges = ['Venue', 'Fechas', 'Capacidad', 'Validación backend'];
+  protected readonly eventCreateGuide = [
+    'Seleccioná un lugar disponible y respetá su capacidad máxima.',
+    'Verificá fecha y hora de inicio y fin antes de registrar el evento.',
+    'No se permiten eventos activos solapados en el mismo lugar.',
+    'Las reglas finales se validan nuevamente en el backend al guardar.',
+  ];
 
   protected readonly eventForm = this.fb.group({
     title: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(100)]],
