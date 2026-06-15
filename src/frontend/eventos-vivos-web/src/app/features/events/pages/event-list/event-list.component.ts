@@ -377,8 +377,18 @@ import { toColombiaDateTimeOffset } from '../../../../shared/utils/date-time-uti
         align-items: stretch;
       }
 
+      .event-filter-group {
+        width: 100%;
+      }
+
+      .event-filter-group > .toolbar-search,
+      .event-filter-group > .toolbar-select,
+      .event-filter-group > .toolbar-date-control {
+        flex: 1 1 100%;
+        width: 100%;
+      }
+
       .toolbar-date-control {
-        flex: 1 1 calc(50% - 3px);
         align-items: stretch;
         flex-direction: column;
         gap: 2px;
