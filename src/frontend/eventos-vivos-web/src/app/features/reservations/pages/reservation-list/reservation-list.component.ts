@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -8,6 +8,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { ReservationFilters, ReservationResponse } from '../../../../core/models/reservation.model';
+import { EventsApiService } from '../../../../core/api/events-api.service';
+import { EventResponse } from '../../../../core/models/event.model';
 import { ReservationsFacade } from '../../store/reservations.facade';
 import { StatusChipComponent } from '../../../../shared/components/status-chip/status-chip.component';
 import { LoadingStateComponent } from '../../../../shared/components/loading-state/loading-state.component';
@@ -392,10 +394,11 @@ import { ErrorStateComponent } from '../../../../shared/components/error-state/e
 })
 export class ReservationListComponent {
   private readonly reservationsFacade = inject(ReservationsFacade);
+  private readonly eventsApi = inject(EventsApiService);
   private readonly notification = inject(NotificationService);
 
   protected readonly reservations = toSignal(this.reservationsFacade.reservations$, { initialValue: [] });
-  protected readonly events = toSignal(this.reservationsFacade.eventsLookup$, { initialValue: [] });
+  protected readonly events = signal<EventResponse[]>([]);
   protected readonly loading = toSignal(this.reservationsFacade.loading$, { initialValue: false });
   protected readonly error = toSignal(this.reservationsFacade.error$, { initialValue: null });
   protected statusFilter = '';
@@ -412,7 +415,7 @@ export class ReservationListComponent {
   protected readonly pageEnd = toSignal(this.reservationsFacade.pageEnd$, { initialValue: 0 });
 
   constructor() {
-    this.reservationsFacade.loadEventsLookup();
+    this.loadEventsCatalog();
     this.loadReservations();
   }
 
@@ -479,6 +482,13 @@ export class ReservationListComponent {
     if (this.eventFilterId) filters.eventId = this.eventFilterId;
 
     this.reservationsFacade.loadReservations(filters, pageNumber, pageSize);
+  }
+
+  private loadEventsCatalog(): void {
+    this.eventsApi.list(undefined, 1, 100).subscribe({
+      next: (result) => this.events.set(result.items),
+      error: () => this.events.set([]),
+    });
   }
 
   protected async confirmPayment(reservation: ReservationResponse): Promise<void> {
