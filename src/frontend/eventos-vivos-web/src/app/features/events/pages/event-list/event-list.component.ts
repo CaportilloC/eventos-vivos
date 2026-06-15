@@ -335,11 +335,27 @@ import { toColombiaDateTimeOffset } from '../../../../shared/utils/date-time-uti
 
     .event-toolbar-filters {
       width: 100%;
-      justify-content: flex-end;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
     }
 
     .event-filter-group {
+      display: grid;
+      grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(132px, 0.8fr)) repeat(2, minmax(170px, 1fr));
+      align-items: end;
+      gap: 8px;
+      min-width: 0;
       flex: 1 1 auto;
+    }
+
+    .event-filter-group > .toolbar-search,
+    .event-filter-group > .toolbar-select,
+    .event-filter-group > .toolbar-date-control {
+      min-width: 0;
+      width: 100%;
+      max-width: none;
     }
 
     .toolbar-date-control {
@@ -353,7 +369,7 @@ import { toColombiaDateTimeOffset } from '../../../../shared/utils/date-time-uti
     }
 
     .toolbar-date-input {
-      width: 138px;
+      width: 100%;
       height: 31px;
       font-size: 13px;
       padding-top: 0;
@@ -368,6 +384,38 @@ import { toColombiaDateTimeOffset } from '../../../../shared/utils/date-time-uti
       text-align: right;
     }
 
+    @media (max-width: 1399.98px) {
+      .event-filter-group {
+        grid-template-columns: minmax(240px, 2fr) repeat(3, minmax(140px, 1fr));
+      }
+
+      .toolbar-date-control {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 2px;
+      }
+    }
+
+    @media (max-width: 991.98px) {
+      .event-toolbar-filters {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .event-filter-group {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+      }
+
+      .event-filter-group > .toolbar-search {
+        grid-column: 1 / -1;
+      }
+
+      .event-toolbar-filters .action-group {
+        justify-content: flex-end;
+      }
+    }
+
     @media (max-width: 575.98px) {
       .event-toolbar-header {
         align-items: stretch;
@@ -378,6 +426,7 @@ import { toColombiaDateTimeOffset } from '../../../../shared/utils/date-time-uti
       }
 
       .event-filter-group {
+        grid-template-columns: 1fr;
         width: 100%;
       }
 
