@@ -155,11 +155,11 @@ import { OperationalGuideComponent } from '../../../../shared/components/operati
                   </div>
                   <div class="summary-grid">
                     <span><strong>Fecha:</strong> {{ evt.startsAt | date:'dd/MM/yyyy HH:mm' }}</span>
-                    <span><strong>Precio unitario:</strong> {{ evt.price | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                    <span><strong>Precio unitario:</strong> {{ evt.price | currency:'USD':'symbol':'1.2-2' }}</span>
                     <span><strong>Ocupación:</strong> {{ occupancyLabel(evt) }}</span>
                     <span><strong>Disponibles:</strong> {{ evt.availableTickets }}</span>
                     <span><strong>Cantidad:</strong> {{ quantityValue() }}</span>
-                    <span class="summary-total"><strong>Total a pagar:</strong> {{ totalToPay() | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                    <span class="summary-total"><strong>Total a pagar:</strong> {{ totalToPay() | currency:'USD':'symbol':'1.2-2' }}</span>
                   </div>
                 </div>
               }
@@ -363,11 +363,12 @@ export class ReservationFormComponent {
     const quantity = this.quantityValue();
     return selectedEvent ? selectedEvent.price * quantity : 0;
   });
-  protected readonly reservationCreateBadges = ['Disponibilidad', 'Pago pendiente', 'Expiración', 'Validación backend'];
+  protected readonly reservationCreateBadges = ['Disponibilidad', 'Pago pendiente', 'Expiración', 'USD', 'Validación backend'];
   protected readonly reservationCreateGuide = [
     'Seleccioná un evento activo y con disponibilidad suficiente.',
     'Registrá nombre y correo correctos para seguimiento de la reserva.',
-    'Reglas de cantidad: mínimo 1, máximo general 100, menos de 24 h máximo 5, precio mayor a 100 máximo 10.',
+    'La moneda base del proyecto es USD; el precio y total a pagar se muestran en dólares.',
+    'Reglas de cantidad: mínimo 1, máximo general 100, menos de 24 h máximo 5, precio mayor a USD 100 máximo 10.',
     'No se puede reservar a menos de 1 h del inicio; si aplican varios límites, gana el más estricto.',
     'La reserva queda pendiente hasta confirmar el pago correspondiente.',
   ];
@@ -421,8 +422,9 @@ export class ReservationFormComponent {
     });
     const price = new Intl.NumberFormat('es-CO', {
       style: 'currency',
-      currency: 'COP',
-      maximumFractionDigits: 0,
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(evt.price);
 
     return `${evt.title} · ${start} · ${price} · ${this.occupancyLabel(evt)}`;
@@ -446,7 +448,7 @@ export class ReservationFormComponent {
       }
       if (selectedEvent.price > 100) {
         max = Math.min(max, 10);
-        limitMessages.push('Precio mayor a 100: máximo 10.');
+        limitMessages.push('Precio mayor a USD 100: máximo 10.');
       }
       max = Math.min(max, selectedEvent.availableTickets);
       limitMessages.push(`Disponibles: ${selectedEvent.availableTickets}.`);

@@ -201,7 +201,7 @@ import { OperationalGuideComponent } from '../../../../shared/components/operati
               <mat-card-title>Ingresos</mat-card-title>
             </mat-card-header>
             <mat-card-content>
-              <span class="metric-value large currency">{{ r.revenue | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+              <span class="metric-value large currency">{{ r.revenue | currency:'USD':'symbol':'1.2-2' }}</span>
             </mat-card-content>
           </mat-card>
         </div>

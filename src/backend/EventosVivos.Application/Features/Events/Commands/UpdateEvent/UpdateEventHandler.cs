@@ -24,7 +24,7 @@ namespace EventosVivos.Application.Features.Events.Commands.UpdateEvent;
 /// <param name="MaxCapacity">Maximum tickets. Cannot exceed venue capacity (RN-01).</param>
 /// <param name="StartsAt">Event start date/time.</param>
 /// <param name="EndsAt">Event end date/time. Weekend events must end by 22:00 (RN-03).</param>
-/// <param name="Price">Ticket price in COP.</param>
+/// <param name="Price">Ticket price in USD.</param>
 /// <param name="Type">Event type: conferencia, taller, or concierto.</param>
 public record UpdateEventRequest(
     Guid EventId,

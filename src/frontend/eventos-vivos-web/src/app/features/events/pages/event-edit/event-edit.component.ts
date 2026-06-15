@@ -293,7 +293,7 @@ const DD_MM_YYYY_FORMATS: MatDateFormats = {
                   }
 
                   <mat-form-field appearance="outline">
-                    <mat-label>Precio ($)</mat-label>
+                    <mat-label>Precio (USD)</mat-label>
                     <input matInput type="number" formControlName="price" min="0" step="0.01" />
                     @if (eventForm.get('price')?.hasError('required')) {
                       <mat-error>Indique el precio</mat-error>
@@ -361,10 +361,11 @@ export class EventEditComponent implements OnInit {
   protected readonly error = toSignal(this.eventsFacade.error$, { initialValue: null });
   protected readonly submitError = toSignal(this.eventsFacade.submitError$, { initialValue: null });
   protected readonly timeOptions = generateTimeOptions();
-  protected readonly eventEditBadges = ['Estado operativo', 'Reservas', 'Capacidad', 'Fechas'];
+  protected readonly eventEditBadges = ['Estado operativo', 'Reservas', 'Capacidad', 'Fechas', 'USD'];
   protected readonly eventEditGuide = [
     'Confirmá que el evento siga siendo coherente con las reservas existentes.',
     'Cambiar lugar o capacidad puede afectar la disponibilidad operativa.',
+    'La moneda base del proyecto es USD; conservá los precios en dólares al editar.',
     'Las fechas se conservan con zona horaria Colombia para evitar cambios inesperados.',
     'El backend vuelve a validar reglas de solapamiento y capacidad al actualizar.',
   ];

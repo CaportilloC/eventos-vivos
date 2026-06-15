@@ -119,26 +119,26 @@ public static class DemoDataSeeder
 
         var events = new[]
         {
-            CreateEvent("Midudev en Bogota: Frontend que Escala", EventType.Conferencia, 1, 160, 120000m, PastSchedule(nowBogota, 24, 18), "Charla tecnica sobre arquitectura frontend, rendimiento y buenas practicas para equipos web."),
-            CreateEvent("Taller de Ciberseguridad para Pymes", EventType.Taller, 1, 120, 85000m, PastSchedule(nowBogota, 18, 17), "Sesion practica para proteger correos, accesos, datos de clientes y operaciones digitales."),
-            CreateEvent("Diamante Eléctrico - Noche Capital", EventType.Concierto, 1, 180, 180000m, CurrentSchedule(nowBogota), "Concierto en formato electrico con repertorio de rock colombiano y artistas invitados."),
-            CreateEvent("Arquitectura de Software para Equipos Fintech", EventType.Conferencia, 1, 150, 120000m, FutureSchedule(nowBogota, 1, 18), "Encuentro sobre modularidad, deuda tecnica, observabilidad y decisiones de arquitectura."),
-            CreateEvent("Marketing Digital para Marcas Culturales", EventType.Taller, 1, 110, 65000m, FutureSchedule(nowBogota, 8, 18), "Workshop para planear campanas, medir audiencias y vender boleteria cultural con datos."),
-            CreateEvent("Enjambre - Segunda Fecha", EventType.Concierto, 1, 180, 220000m, FutureSchedule(nowBogota, 16, 20), "Segunda presentacion de Enjambre en Colombia con produccion completa para publico general."),
+            CreateEvent("Midudev en Bogota: Frontend que Escala", EventType.Conferencia, 1, 160, 120m, PastSchedule(nowBogota, 24, 18), "Charla tecnica sobre arquitectura frontend, rendimiento y buenas practicas para equipos web."),
+            CreateEvent("Taller de Ciberseguridad para Pymes", EventType.Taller, 1, 120, 85m, PastSchedule(nowBogota, 18, 17), "Sesion practica para proteger correos, accesos, datos de clientes y operaciones digitales."),
+            CreateEvent("Diamante Eléctrico - Noche Capital", EventType.Concierto, 1, 180, 180m, CurrentSchedule(nowBogota), "Concierto en formato electrico con repertorio de rock colombiano y artistas invitados."),
+            CreateEvent("Arquitectura de Software para Equipos Fintech", EventType.Conferencia, 1, 150, 120m, FutureSchedule(nowBogota, 1, 18), "Encuentro sobre modularidad, deuda tecnica, observabilidad y decisiones de arquitectura."),
+            CreateEvent("Marketing Digital para Marcas Culturales", EventType.Taller, 1, 110, 65m, FutureSchedule(nowBogota, 8, 18), "Workshop para planear campanas, medir audiencias y vender boleteria cultural con datos."),
+            CreateEvent("Enjambre - Segunda Fecha", EventType.Concierto, 1, 180, 220m, FutureSchedule(nowBogota, 16, 20), "Segunda presentacion de Enjambre en Colombia con produccion completa para publico general."),
 
-            CreateEvent("Turismo Regenerativo en el Eje Cafetero", EventType.Conferencia, 2, 45, 65000m, PastSchedule(nowBogota, 22, 18), "Conversatorio sobre experiencias turisticas responsables, comunidades locales y sostenibilidad."),
-            CreateEvent("Autodefensa Urbana para Mujeres", EventType.Taller, 2, 42, 45000m, PastSchedule(nowBogota, 15, 16), "Taller introductorio de prevencion, lectura del entorno y tecnicas basicas de defensa personal."),
-            CreateEvent("Enjambre - Primera Fecha", EventType.Concierto, 2, 45, 180000m, CurrentSchedule(nowBogota), "Concierto intimo de Enjambre con cupo limitado y experiencia cercana al escenario."),
-            CreateEvent("Producto Digital para Startups Colombianas", EventType.Conferencia, 2, 45, 85000m, FutureSchedule(nowBogota, 1, 17), "Charla aplicada sobre descubrimiento, metricas, estrategia de producto y crecimiento temprano."),
-            CreateEvent("Taller de Convivencia y Buen Trato Comunitario", EventType.Taller, 2, 40, 45000m, FutureSchedule(nowBogota, 10, 17), "Espacio participativo para fortalecer comunicacion, mediacion y acuerdos de convivencia."),
-            CreateEvent("Cuarteto de Nos - Historias Improbables", EventType.Concierto, 2, 45, 220000m, FutureSchedule(nowBogota, 18, 20), "Presentacion especial de Cuarteto de Nos en formato de auditorio para seguidores de la banda."),
+            CreateEvent("Turismo Regenerativo en el Eje Cafetero", EventType.Conferencia, 2, 45, 65m, PastSchedule(nowBogota, 22, 18), "Conversatorio sobre experiencias turisticas responsables, comunidades locales y sostenibilidad."),
+            CreateEvent("Autodefensa Urbana para Mujeres", EventType.Taller, 2, 42, 45m, PastSchedule(nowBogota, 15, 16), "Taller introductorio de prevencion, lectura del entorno y tecnicas basicas de defensa personal."),
+            CreateEvent("Enjambre - Primera Fecha", EventType.Concierto, 2, 45, 180m, CurrentSchedule(nowBogota), "Concierto intimo de Enjambre con cupo limitado y experiencia cercana al escenario."),
+            CreateEvent("Producto Digital para Startups Colombianas", EventType.Conferencia, 2, 45, 85m, FutureSchedule(nowBogota, 1, 17), "Charla aplicada sobre descubrimiento, metricas, estrategia de producto y crecimiento temprano."),
+            CreateEvent("Taller de Convivencia y Buen Trato Comunitario", EventType.Taller, 2, 40, 45m, FutureSchedule(nowBogota, 10, 17), "Espacio participativo para fortalecer comunicacion, mediacion y acuerdos de convivencia."),
+            CreateEvent("Cuarteto de Nos - Historias Improbables", EventType.Concierto, 2, 45, 220m, FutureSchedule(nowBogota, 18, 20), "Presentacion especial de Cuarteto de Nos en formato de auditorio para seguidores de la banda."),
 
-            CreateEvent("Gustavo Cerati Sinfonico", EventType.Concierto, 3, 420, 220000m, PastSchedule(nowBogota, 28, 20), "Homenaje sinfonico al repertorio de Gustavo Cerati con banda invitada y visuales inmersivos."),
-            CreateEvent("Colombia Sostenible: Empresas y Territorio", EventType.Conferencia, 3, 300, 120000m, PastSchedule(nowBogota, 20, 18), "Foro empresarial sobre energia, ciudades sostenibles, biodiversidad y desarrollo regional."),
-            CreateEvent("Bootcamp de Datos para Decisiones Publicas", EventType.Taller, 3, 240, 85000m, CurrentSchedule(nowBogota), "Entrenamiento practico en analisis de datos, tableros e indicadores para equipos publicos."),
-            CreateEvent("Conciencia en Ciberseguridad para Familias", EventType.Conferencia, 3, 260, 65000m, FutureSchedule(nowBogota, 1, 19), "Charla abierta sobre fraudes digitales, privacidad, contrasenas y cuidado de menores en linea."),
-            CreateEvent("Taller de Emprendimiento Creativo", EventType.Taller, 3, 220, 85000m, FutureSchedule(nowBogota, 12, 18), "Laboratorio para validar propuestas culturales, calcular costos y preparar lanzamientos."),
-            CreateEvent("Enjambre - Tercera Fecha", EventType.Concierto, 3, 430, 220000m, FutureSchedule(nowBogota, 21, 20), "Tercera fecha de Enjambre con montaje de gran formato y zona gastronomica colombiana."),
+            CreateEvent("Gustavo Cerati Sinfonico", EventType.Concierto, 3, 420, 220m, PastSchedule(nowBogota, 28, 20), "Homenaje sinfonico al repertorio de Gustavo Cerati con banda invitada y visuales inmersivos."),
+            CreateEvent("Colombia Sostenible: Empresas y Territorio", EventType.Conferencia, 3, 300, 120m, PastSchedule(nowBogota, 20, 18), "Foro empresarial sobre energia, ciudades sostenibles, biodiversidad y desarrollo regional."),
+            CreateEvent("Bootcamp de Datos para Decisiones Publicas", EventType.Taller, 3, 240, 85m, CurrentSchedule(nowBogota), "Entrenamiento practico en analisis de datos, tableros e indicadores para equipos publicos."),
+            CreateEvent("Conciencia en Ciberseguridad para Familias", EventType.Conferencia, 3, 260, 65m, FutureSchedule(nowBogota, 1, 19), "Charla abierta sobre fraudes digitales, privacidad, contrasenas y cuidado de menores en linea."),
+            CreateEvent("Taller de Emprendimiento Creativo", EventType.Taller, 3, 220, 85m, FutureSchedule(nowBogota, 12, 18), "Laboratorio para validar propuestas culturales, calcular costos y preparar lanzamientos."),
+            CreateEvent("Enjambre - Tercera Fecha", EventType.Concierto, 3, 430, 220m, FutureSchedule(nowBogota, 21, 20), "Tercera fecha de Enjambre con montaje de gran formato y zona gastronomica colombiana."),
         };
 
         foreach (var @event in events)
@@ -154,12 +154,12 @@ public static class DemoDataSeeder
         var buyerIndex = 0;
         var reservations = new List<Reservation>();
 
-        AddPastStory(reservations, events[0], ref buyerIndex, ref codeSequence, 22, 18, 6, 5);
+        AddPastStory(reservations, events[0], ref buyerIndex, ref codeSequence, 10, 8, 6, 5);
         AddPastStory(reservations, events[1], ref buyerIndex, ref codeSequence, 14, 11, 4, 3);
-        AddCurrentStory(reservations, events[2], nowBogota, ref buyerIndex, ref codeSequence, 38, 12, 7, 5);
-        AddNearFutureStory(reservations, events[3], nowBogota, ref buyerIndex, ref codeSequence, 28, 10, 6, 4);
+        AddCurrentStory(reservations, events[2], nowBogota, ref buyerIndex, ref codeSequence, 10, 10, 7, 5);
+        AddNearFutureStory(reservations, events[3], nowBogota, ref buyerIndex, ref codeSequence, 10, 10, 6, 4);
         AddFutureStory(reservations, events[4], nowBogota, ref buyerIndex, ref codeSequence, 18, 14, 8, 4);
-        AddFutureStory(reservations, events[5], nowBogota, ref buyerIndex, ref codeSequence, 42, 35, 16, 6);
+        AddFutureStory(reservations, events[5], nowBogota, ref buyerIndex, ref codeSequence, 10, 8, 10, 6);
 
         AddPastStory(reservations, events[6], ref buyerIndex, ref codeSequence, 8, 7, 3, 2);
         AddPastStory(reservations, events[7], ref buyerIndex, ref codeSequence, 6, 5, 2, 2);
@@ -168,12 +168,12 @@ public static class DemoDataSeeder
         AddFutureStory(reservations, events[10], nowBogota, ref buyerIndex, ref codeSequence, 7, 6, 4, 2);
         AddFutureStory(reservations, events[11], nowBogota, ref buyerIndex, ref codeSequence, 10, 8, 4, 2);
 
-        AddPastStory(reservations, events[12], ref buyerIndex, ref codeSequence, 95, 80, 22, 14);
-        AddPastStory(reservations, events[13], ref buyerIndex, ref codeSequence, 48, 42, 12, 10);
+        AddPastStory(reservations, events[12], ref buyerIndex, ref codeSequence, 10, 10, 10, 10);
+        AddPastStory(reservations, events[13], ref buyerIndex, ref codeSequence, 10, 10, 10, 10);
         AddCurrentStory(reservations, events[14], nowBogota, ref buyerIndex, ref codeSequence, 55, 35, 16, 10);
-        AddNearFutureStory(reservations, events[15], nowBogota, ref buyerIndex, ref codeSequence, 44, 26, 12, 8);
+        AddNearFutureStory(reservations, events[15], nowBogota, ref buyerIndex, ref codeSequence, 10, 10, 10, 8);
         AddFutureStory(reservations, events[16], nowBogota, ref buyerIndex, ref codeSequence, 36, 30, 18, 8);
-        AddFutureStory(reservations, events[17], nowBogota, ref buyerIndex, ref codeSequence, 80, 65, 28, 12);
+        AddFutureStory(reservations, events[17], nowBogota, ref buyerIndex, ref codeSequence, 10, 10, 10, 10);
 
         await db.Reservations.AddRangeAsync(reservations, ct);
         await db.SaveChangesAsync(ct);

@@ -14,7 +14,7 @@ namespace EventosVivos.Application.DTOs;
 /// <c>cancelado</c> = event was manually canceled.</param>
 /// <param name="StartsAt">Event start date/time.</param>
 /// <param name="EndsAt">Event end date/time. Weekend events must end by 22:00 (RN-03).</param>
-/// <param name="Price">Ticket price in COP. Must be greater than zero.</param>
+/// <param name="Price">Ticket price in USD. Must be greater than zero.</param>
 /// <param name="MaxCapacity">Maximum tickets available. Cannot exceed venue capacity (RN-01).</param>
 public record EventResponse(
     Guid Id,

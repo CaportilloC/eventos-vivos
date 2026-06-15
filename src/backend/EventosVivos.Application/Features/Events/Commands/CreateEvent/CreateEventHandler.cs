@@ -22,7 +22,7 @@ namespace EventosVivos.Application.Features.Events.Commands.CreateEvent;
 /// <param name="MaxCapacity">Maximum number of tickets. Cannot exceed the venue's capacity (RN-01).</param>
 /// <param name="StartsAt">Event start date/time. Must be in the future.</param>
 /// <param name="EndsAt">Event end date/time. Weekend events must end by 22:00 (RN-03).</param>
-/// <param name="Price">Ticket price in COP. Must be greater than zero.</param>
+/// <param name="Price">Ticket price in USD. Must be greater than zero.</param>
 /// <param name="Type">Event type: conferencia, taller, or concierto.</param>
 public record CreateEventRequest(
     string Title,

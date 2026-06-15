@@ -258,10 +258,11 @@ export class ReservationEditComponent {
   protected readonly loadError = toSignal(this.reservationsFacade.error$, { initialValue: null });
   protected readonly submitting = toSignal(this.reservationsFacade.submitting$, { initialValue: false });
   protected readonly error = toSignal(this.reservationsFacade.submitError$, { initialValue: null });
-  protected readonly reservationEditBadges = ['Pendiente de pago', 'Comprador', 'Cantidad', 'Estado'];
+  protected readonly reservationEditBadges = ['Pendiente de pago', 'Comprador', 'Cantidad', 'Estado', 'USD'];
   protected readonly reservationEditGuide = [
     'Verificá que la reserva permanezca en estado pendiente de pago.',
     'Actualizá datos del comprador solo cuando sea necesario para la operación.',
+    'La moneda base del proyecto es USD; cualquier validación por precio usa dólares.',
     'Revisá la cantidad solicitada antes de guardar cambios.',
     'La confirmación de pago se realiza en el flujo correspondiente, no desde esta edición.',
   ];
